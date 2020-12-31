@@ -11,9 +11,9 @@
 
 
 
-/* Copyright (C)Copyright 2005-2020 Bitland Telecom. All rights reserved.
+/* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
-   Author: Morgen Zhu
+   Author: MorgenZhu,ZhouHao
    
    Description: These functions of this file are reference only in the Windows!
    It can read/write chromium-EC RAM by 
