@@ -731,6 +731,9 @@ FILE *WUCfgFile = NULL;
 FILE *SDTxtFile = NULL;
 FILE *WUTxtFile = NULL;
 FILE *txtFile = NULL;
+FILE *SDBinFile = NULL;
+FILE *WUBinFile = NULL;
+
 
 
 typedef struct Log_Info{
@@ -870,7 +873,6 @@ int analysis_log_info(Node *head, uint32_t log_id, FILE *txtFile)
 	{
 		if(ptr->log_id == log_id)
 		{
-			printf("%s\n", ptr->log);
 			fprintf(txtFile, "%s\n", ptr->log);
 			return 0;
 		}
@@ -2284,6 +2286,173 @@ sysinfo_error_usage:
 	return -1;
 }
 
+int ec_flash_read(uint8_t *buf, int offset, int size)
+{
+	struct ec_params_flash_read p;
+	int rv;
+	int i;
+    char build_string[256];
+
+	/* Read data in chunks */
+	for (i = 0; i < size; i += 0xF0)
+    {
+		p.offset = offset + i;
+		p.size = MIN(size - i, 0xF0);
+		rv = ec_command(EC_CMD_FLASH_READ, 0, &p,
+                                sizeof(p), build_string, p.size);
+		if (rv < 0) {
+			fprintf(stderr, "Read error at offset %d\n", i);
+			return rv;
+		}
+		memcpy(buf + i, build_string, p.size);
+	}
+
+	return 0;
+}
+
+int cmd_read_8k_bin(int argc, char *argv[])
+{
+	int offset, size;
+	int rv;
+	char *e;
+	uint8_t *buf;
+
+	offset = 0x3c000;
+	size = 0x2000;
+	
+	printf("Reading %d bytes at offset %d...\n", size, offset);
+
+	buf = (uint8_t *)malloc(size);
+	if (!buf) {
+		fprintf(stderr, "Unable to allocate buffer.\n");
+		return -1;
+	}
+
+	/* Read data in chunks */
+	rv = ec_flash_read(buf, offset, size);
+	if (rv < 0) {
+		free(buf);
+		return rv;
+	}
+
+	rv = write_file("8k_shutdown_wakeup_case.bin", buf, size);
+	free(buf);
+	if (rv)
+		return rv;
+
+	printf("done.\n\n");
+	return 0;
+}
+
+
+
+int cmd_anay_shutdown_case(int argc, char *argv[])
+{
+	int i, rv;
+	char date[32];
+	uint32_t buf[1024];
+
+	rv = read_shutdown_case_into_linklist();
+	if(rv < 0)
+	{
+		return rv;
+	}
+	
+	if((SDBinFile = fopen("8k_shutdown_wakeup_case.bin","r")) == NULL)
+	{
+		printf("8k_shutdown_wakeup_case.bin not exist\n\n");
+		return -1;
+	}
+
+	//fseek(SDBinFile, 128, SEEK_SET);
+	fread(buf, 4, 1024, SDBinFile);
+
+	SDTxtFile = fopen("shutdown-case.txt","w");
+	if(SDTxtFile == NULL)
+	{
+		printf("Creat shutdown-case.txt file Fail\n\n");
+		return -1;
+	}
+	
+	for (i = 32; i < 1024; i+=2)
+    {
+   		if(buf[i] = 0xffffffff)
+			break;
+		
+    	i++;
+    	sec_to_date(buf[i], date);
+		analysis_data(date);
+		fprintf(SDTxtFile, "[ %s ] : %x : ", date, buf[i]);
+		
+		i--;
+		if( analysis_log_info(shutdown_case_head, buf[i], SDTxtFile) )
+		{
+			fprintf(SDTxtFile, "unkonw log id\n");
+		}
+	}
+
+	fclose(SDTxtFile);
+	printf("Creat shutdown-case.txt file OK\n\n");
+
+	return 0;
+}
+
+
+int cmd_anay_wakeup_case(int argc, char *argv[])
+{
+	int i, rv;
+	char date[32];
+	uint32_t buf[1024];
+
+	rv = read_wakeup_case_into_linklist();
+	if(rv < 0)
+	{
+		return rv;
+	}
+	
+	if((WUBinFile = fopen("8k_shutdown_wakeup_case.bin","r")) == NULL)
+	{
+		printf("8k_shutdown_wakeup_case.bin not exist\n\n");
+		return -1;
+	}
+
+	fseek(WUBinFile, 4096, SEEK_SET);
+	fread(buf, 4, 1024, WUBinFile);
+
+	WUTxtFile = fopen("wakeup-case.txt","w");
+	if(WUTxtFile == NULL)
+	{
+		printf("Creat wakeup-case.txt file Fail\n\n");
+		return -1;
+	}
+	
+	for (i = 32; i < 1024; i+=2)
+    {
+		if(buf[i] = 0xffffffff)
+			break;
+    	i++;
+    	sec_to_date(buf[i], date);
+		analysis_data(date);
+		printf("i = %d\n", i);
+		printf("date = %s\n", date);
+		fprintf(WUTxtFile, "[ %s ] : %x : ", date, buf[i]);
+		
+		i--;
+		printf("i = %d\n", i);
+		if( analysis_log_info(wakeup_case_head, buf[i], WUTxtFile) )
+		{
+			fprintf(WUTxtFile, "unkonw log id\n");
+		}
+	}
+
+	fclose(SDTxtFile);
+	printf("Creat shutdown-case.txt file OK\n\n");
+
+	return 0;
+
+}
+
+
 int cmd_read_shutdown_case(int argc, char *argv[])
 {
 	struct ec_params_flash_read p;
@@ -2526,30 +2695,6 @@ int cmd_rtc_get_alarm(int argc, char *argv[])
 		printf("Alarm not set\n");
 	else
 		printf("Alarm to go off in %d secs\n", r.time);
-	return 0;
-}
-
-int ec_flash_read(uint8_t *buf, int offset, int size)
-{
-	struct ec_params_flash_read p;
-	int rv;
-	int i;
-    char build_string[256];
-
-	/* Read data in chunks */
-	for (i = 0; i < size; i += 0xF0)
-    {
-		p.offset = offset + i;
-		p.size = MIN(size - i, 0xF0);
-		rv = ec_command(EC_CMD_FLASH_READ, 0, &p,
-                                sizeof(p), build_string, p.size);
-		if (rv < 0) {
-			fprintf(stderr, "Read error at offset %d\n", i);
-			return rv;
-		}
-		memcpy(buf + i, build_string, p.size);
-	}
-
 	return 0;
 }
 
@@ -3921,6 +4066,10 @@ const struct command Tool_Cmd_Array[] = {
 	//{"pwmsetduty", cmd_pwm_set_duty},
 	//{"rand", cmd_rand},
 	//{"readtest", cmd_read_test},
+	{"read8kbin", cmd_read_8k_bin},
+	{"anayshutdowncase", cmd_anay_shutdown_case},
+	{"anaywakeupcase", cmd_anay_wakeup_case},
+	
 	{"readshutdowncase", cmd_read_shutdown_case},
 	{"readwakeupcase", cmd_read_wakeup_case},
 	{"rebootec", cmd_reboot_ec},
