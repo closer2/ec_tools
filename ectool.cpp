@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V0.1"
+#define TOOLS_VER   "V0.2"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -392,11 +392,19 @@ int comm_init_lpc(void)
 	 * seeing whether the EC sets the EC_HOST_ARGS_FLAG_FROM_HOST flag
 	 * in args when it responds.
 	 */
+	
+	/*
+	 * We have modified the EC ACPI RAM definition.
+	 * Therefore, the "EC" character cannot be checked.
+	 *  Morgen@2021/01/02
+	 * */
+	#if 0
 	if (inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID) != 'E' ||
 	    inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID + 1) != 'C') {
 		fprintf(stderr, "Missing Chromium EC memory map.\n");
 		return -5;
 	}
+	#endif
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
 			sizeof(struct ec_host_request);
@@ -3809,14 +3817,12 @@ struct command {
 /* NULL-terminated list of commands */
 const struct command Tool_Cmd_Array[] = {
 	{"adcread", cmd_adc_read},
-	//{"battery", cmd_battery},
 	//{"addentropy", cmd_add_entropy},
 	{"apreset", cmd_apreset},
 	{"autofanctrl", cmd_thermal_auto_fan_ctrl},
 	//{"backlight", cmd_lcd_backlight},
-	{"backupec", cmd_backup_ec},
-	{"battery", cmd_battery},
-	{"batterycutoff", cmd_battery_cut_off},
+	//{"battery", cmd_battery},
+	//{"batterycutoff", cmd_battery_cut_off},
 	//{"batteryparam", cmd_battery_vendor_param},
 	{"boardversion", cmd_board_version},
 	//{"button", cmd_button},
@@ -3826,27 +3832,29 @@ const struct command Tool_Cmd_Array[] = {
 	//{"chargeoverride", cmd_charge_port_override},
 	//{"chargestate", cmd_charge_state},
 	{"chipinfo", cmd_chipinfo},
-	{"cmdversions", cmd_cmdversions},
-	{"console", cmd_console},
+	//{"cmdversions", cmd_cmdversions},
+	//{"console", cmd_console},
 	//{"cec", cmd_cec},
 	//{"echash", cmd_ec_hash},
-	{"eventclear", cmd_host_event_clear},
-	{"eventclearb", cmd_host_event_clear_b},
-	{"eventget", cmd_host_event_get_raw},
-	{"eventgetb", cmd_host_event_get_b},
-	{"eventgetscimask", cmd_host_event_get_sci_mask},
-	{"eventgetsmimask", cmd_host_event_get_smi_mask},
-	{"eventgetwakemask", cmd_host_event_get_wake_mask},
-	{"eventsetscimask", cmd_host_event_set_sci_mask},
-	{"eventsetsmimask", cmd_host_event_set_smi_mask},
-	{"eventsetwakemask", cmd_host_event_set_wake_mask},
+	//{"eventclear", cmd_host_event_clear},
+	//{"eventclearb", cmd_host_event_clear_b},
+	//{"eventget", cmd_host_event_get_raw},
+	//{"eventgetb", cmd_host_event_get_b},
+	//{"eventgetscimask", cmd_host_event_get_sci_mask},
+	//{"eventgetsmimask", cmd_host_event_get_smi_mask},
+	//{"eventgetwakemask", cmd_host_event_get_wake_mask},
+	//{"eventsetscimask", cmd_host_event_set_sci_mask},
+	//{"eventsetsmimask", cmd_host_event_set_smi_mask},
+	//{"eventsetwakemask", cmd_host_event_set_wake_mask},
+    {"ecupdate", cmd_flash_ec},
+    {"ecbackup", cmd_backup_ec},
+    
 	//{"extpwrlimit", cmd_ext_power_limit},
 	{"fanduty", cmd_fanduty},
 	//{"flasherase", cmd_flash_erase},
 	//{"flasheraseasync", cmd_flash_erase},
 	//{"flashprotect", cmd_flash_protect},
 	{"flashread", cmd_flash_read},
-	{"flashec", cmd_flash_ec},
 	//{"flashwrite", cmd_flash_write},
 	{"flashinfo", cmd_flash_info},
 	//{"flashspiinfo", cmd_flash_spi_info},
@@ -3965,22 +3973,22 @@ const char help_str[] =
 	"      Issue AP reset\n"
 	"  autofanctrl <on>\n"
 	"      Turn on automatic fan speed control.\n"
-	"  backupec\n"
-	"      backup ec\n"
-	"  battery\n"
-	"      Prints battery info\n"
-	"  batterycutoff [at-shutdown]\n"
-	"      Cut off battery output power\n"
+//	"  battery\n"
+//	"      Prints battery info\n"
+//	"  batterycutoff [at-shutdown]\n"
+//	"      Cut off battery output power\n"
 	"  boardversion\n"
 	"      Prints the board version\n"
 	"  chipinfo\n"
 	"      Prints chip info\n"
+    "  ecupdate\n"
+    "      ecupdate ec.bin\n"
+	"  ecbackup\n"
+	"      ecbackup backup.bin\n"
 	"  fanduty <percent>\n"
 	"      Forces the fan PWM to a constant duty cycle\n"
 	"  flashread <offset> <size> <outfile>\n"
 	"      Reads from EC flash to a file\n"
-	"  flashec\n"
-	"      flash ec\n"
 	"  flashinfo\n"
 	"      Prints information on the EC flash\n"
 	"  gpioget <GPIO name>\n"
@@ -4005,6 +4013,10 @@ const char help_str[] =
 	"      Prints the number of fans present\n"
 	"  pwmsetfanrpm <targetrpm>\n"
 	"      Set target fan RPM\n"
+    "  readshutdowncause\n"
+    "      readshutdowncause\n"
+    "  readwakeupcause\n"
+    "      readwakeupcause\n"
 	"  reboot_ec <RO|RW|cold|hibernate|hibernate-clear-ap-off|disable-jump>"
 			" [at-shutdown|switch-slot]\n"
 	"      Reboot EC to RO or RW\n"
