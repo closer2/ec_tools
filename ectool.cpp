@@ -743,7 +743,7 @@ typedef struct Log_Info{
 	
 log_info_struct shutdown_case_list[]=
 {
-	{0xaa0001aa,	"S0 to S4/S5 normal shutdown"},
+	{0x01,	"S0 to S4/S5 normal shutdown"},
 	{0x02,	"S3 to S4/S5 fail off"},
 	{0x03,	"SLP_S3 low trig S0 to S3"},
 	{0x04,	"SLP_S4 low trig S0 to S4"},
@@ -791,7 +791,7 @@ log_info_struct shutdown_case_list[]=
 
 log_info_struct wakeup_case_list[]=
 {
-	{0xaa0002aa,	"PWRSW wakeup from S4/S5(interrupt under AC mode)"},
+	{0x01,	"PWRSW wakeup from S4/S5(interrupt under AC mode)"},
 	{0x02,	"PWRSW wakeup from S4/S5(polling under DC mode)"},
 	{0x03,	"PWRSW wakeup from S3"},
 	{0x04,	"SLP_S3 high trig S3 to S0"},
@@ -2431,23 +2431,21 @@ int cmd_anay_wakeup_case(int argc, char *argv[])
     {
 		if(buf[i] = 0xffffffff)
 			break;
+		
     	i++;
     	sec_to_date(buf[i], date);
 		analysis_data(date);
-		printf("i = %d\n", i);
-		printf("date = %s\n", date);
 		fprintf(WUTxtFile, "[ %s ] : %x : ", date, buf[i]);
 		
 		i--;
-		printf("i = %d\n", i);
 		if( analysis_log_info(wakeup_case_head, buf[i], WUTxtFile) )
 		{
 			fprintf(WUTxtFile, "unkonw log id\n");
 		}
 	}
 
-	fclose(SDTxtFile);
-	printf("Creat shutdown-case.txt file OK\n\n");
+	fclose(WUTxtFile);
+	printf("Creat wakeup-case.txt file OK\n\n");
 
 	return 0;
 
