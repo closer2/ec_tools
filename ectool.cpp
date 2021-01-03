@@ -861,7 +861,6 @@ void free_linklist(Node *head)
 		ptr = ptr->next;
 		free(ptr2);	
 	}
-	printf("free linklist succsee\n\n");
 }
 
 int analysis_log_info(Node *head, uint32_t log_id, FILE *txtFile)
@@ -1069,6 +1068,7 @@ int read_wakeup_case_into_linklist(void)
 typedef struct Log_Node{
 	uint32_t sec;
 	uint32_t log_id;
+	uint32_t flag;
 	struct Log_Node *prew;
 	struct Log_Node *next;
 }LogNode;
@@ -1100,12 +1100,13 @@ void add_data_from_head(LogNode **head, LogNode **tail, uint32_t sec, uint32_t l
 	}
 }
 
-void add_data_from_tail(LogNode **head, LogNode **tail, uint32_t sec, uint32_t log_id)
+void add_data_from_tail(LogNode **head, LogNode **tail, uint32_t sec, uint32_t log_id, uint32_t flag)
 {
 	LogNode *new_node = NULL;
 	new_node = (LogNode *)malloc(sizeof(LogNode));
 	new_node->sec = sec;
 	new_node->log_id = log_id;
+	new_node->flag = flag;
 	new_node->prew = NULL;
 	new_node->next = NULL;
 	if(*head == NULL || *tail == NULL)
@@ -1121,12 +1122,13 @@ void add_data_from_tail(LogNode **head, LogNode **tail, uint32_t sec, uint32_t l
 	}
 }
 
-void insert_data_to_seq_linklist(LogNode *ptr, uint32_t sec, uint32_t log_id)
+void insert_data_to_seq_linklist(LogNode *ptr, uint32_t sec, uint32_t log_id, uint32_t flag)
 {
 	LogNode *new_node = NULL;
 	new_node = (LogNode *)malloc(sizeof(LogNode));
 	new_node->sec = sec;
 	new_node->log_id = log_id;
+	new_node->flag = flag;
 	new_node->prew = NULL;
 	new_node->next = NULL;
 	if(ptr->prew == NULL)
@@ -1164,7 +1166,7 @@ void sort_raw_log_linklist(LogNode *raw)
 		ptr = seq_log_head;
 		if(seq_log_head == NULL)
 		{
-			add_data_from_tail(&seq_log_head, &seq_log_tail, raw->sec, raw->log_id);
+			add_data_from_tail(&seq_log_head, &seq_log_tail, raw->sec, raw->log_id, raw->flag);
 		}
 		
 		while(ptr)
@@ -1172,13 +1174,13 @@ void sort_raw_log_linklist(LogNode *raw)
 			if(raw->sec < ptr->sec)
 			{
 				//printf("insert---\nraw->sec = %x\traw->log_id = %x\n",  raw->sec, raw->log_id);
-				insert_data_to_seq_linklist(ptr, raw->sec, raw->log_id);
+				insert_data_to_seq_linklist(ptr, raw->sec, raw->log_id, raw->flag);
 				break;
 			}
 			else if(ptr->next == NULL)
 			{
 				//printf("add---\nraw->sec = %x\traw->log_id = %x\n",  raw->sec, raw->log_id);
-				add_data_from_tail(&seq_log_head, &seq_log_tail, raw->sec, raw->log_id);
+				add_data_from_tail(&seq_log_head, &seq_log_tail, raw->sec, raw->log_id, raw->flag);
 				break;
 			}
 			else
@@ -1198,18 +1200,27 @@ void analysis_seq_linklist(LogNode *ptr)
 		//analysis data
 		sec_to_date(ptr->sec, date);
 		analysis_data(date);
-		printf("[ %s ] : %x : ", date, ptr->log_id);
-		fprintf(txtFile, "[ %s ] : %x : ", date, ptr->log_id);
+		fprintf(txtFile, "[%s] : ID=[%02X], ", date, ptr->log_id);
 
 		//analysis log
-		if( analysis_log_info(shutdown_case_head, ptr->log_id, txtFile) == 0)
-		{}
-		else if( analysis_log_info(wakeup_case_head, ptr->log_id, txtFile) == 0)
-		{}
-		else
+		if(1 == ptr->flag)
 		{
-			printf("unkonw log id\n");
-			fprintf(txtFile, "unkonw log id\n");
+			if( analysis_log_info(shutdown_case_head, ptr->log_id, txtFile) == 0)
+			{}
+			else
+			{
+				fprintf(txtFile, "unkonw log id\n");
+			}
+		}
+
+		if(0 == ptr->flag)
+		{
+			if( analysis_log_info(wakeup_case_head, ptr->log_id, txtFile) == 0)
+			{}
+			else
+			{
+				fprintf(txtFile, "unkonw log id\n");
+			}
 		}
 
 		//next
@@ -2307,6 +2318,77 @@ int ec_flash_read(uint8_t *buf, int offset, int size)
 		memcpy(buf + i, build_string, p.size);
 	}
 
+	return 0;
+}
+
+int read_shutdown_wakeup_case_to_linklist(void)
+{
+	int i;
+	uint32_t buf[2048];
+
+	if((binaryFile = fopen("8k_shutdown_wakeup_cause.bin","r")) == NULL)
+	{
+		printf("8k_shutdown_wakeup_cause.bin not exist\n\n");
+		return -1;
+	}
+	fread(buf, 4, 2048, binaryFile);
+	fclose(binaryFile);
+	
+	for(i = 32; i < 2048; i+=2)
+	{
+		if(i >= 1024 && i < (1024+32) || 0xffffffff == buf[i])
+			continue;
+		
+		//flag = 1, shutdown cause
+		//flag = 0, shutdown cause
+		if(i <= 1024)
+			add_data_from_tail(&raw_log_head, &raw_log_tail, buf[i+1], buf[i], 1);
+		else
+			add_data_from_tail(&raw_log_head, &raw_log_tail, buf[i+1], buf[i], 0);
+	}
+	
+	return 0;
+}
+
+int cmd_log_info(int argc, char *argv[])
+{
+	int rv;
+
+    if (argc != 1)
+    {
+		fprintf(stderr, "Usage: %s \n", argv[0]);
+		return -1;
+	}
+
+	rv = read_shutdown_case_into_linklist();
+	if(rv < 0)
+	{
+		return rv;
+	}
+
+	rv = read_wakeup_case_into_linklist();
+	if(rv < 0)
+	{
+		return rv;
+	}
+
+	txtFile = fopen("LogInfo.txt","w");
+	if(txtFile == NULL)
+	{
+		printf("Creat default LogInfo.txt file Fail\n\n");
+		return -1;
+	}
+	
+	read_shutdown_wakeup_case_to_linklist();
+	sort_raw_log_linklist(raw_log_head);
+	analysis_seq_linklist(seq_log_head);
+	
+	fclose(txtFile);
+	printf("\nCreat LogInfo.txt file OK\n\n");
+
+	free_linklist(shutdown_case_head);
+	free_linklist(wakeup_case_head);
+	
 	return 0;
 }
 
@@ -3725,84 +3807,6 @@ int cmd_reboot_ap_on_g3(int argc, char *argv[])
 	return (rv < 0 ? rv : 0);
 }
 
-int read_shutdown_wakeup_case_to_linklist(int offset, int size)
-{
-	struct ec_params_flash_read p;
-	int i, rv;
-	uint32_t build_string[4];
-	char date[32];
-	Node *linklist_head;
-
-	for (i = 0; i < size; i += 16)
-    {
-		p.offset = offset + i;
-		p.size = MIN(size - i, 16);
-
-		rv = ec_command(EC_CMD_FLASH_READ, 0, &p,
-                                sizeof(p), build_string, sizeof(build_string));
-		if (rv < 0)
-        {
-			fprintf(stderr, "Read error at offset %d\n", i);
-			return rv;
-		}
-
-		if(build_string[0] == 0xffffffff)
-			return 0;
-
-		add_data_from_tail(&raw_log_head, &raw_log_tail, build_string[1], build_string[0]);
-	}
-
-	
-	return 0;
-}
-
-
-int cmd_log_info(int argc, char *argv[])
-{
-	int rv;
-
-    if (argc != 1)
-    {
-		fprintf(stderr, "Usage: %s \n", argv[0]);
-		return -1;
-	}
-
-	rv = read_shutdown_case_into_linklist();
-	if(rv < 0)
-	{
-		return rv;
-	}
-
-	rv = read_wakeup_case_into_linklist();
-	if(rv < 0)
-	{
-		return rv;
-	}
-
-	txtFile = fopen("LogInfo.txt","w");
-	if(txtFile == NULL)
-	{
-		printf("Creat default LogInfo.txt file Fail\n\n");
-		return -1;
-	}
-	
-	printf(" --- reading shutdown case ---\n\n");	
-	read_shutdown_wakeup_case_to_linklist(0x3C080, 0xF80);
-
-	printf(" --- reading wakeup case ---\n\n");
-	read_shutdown_wakeup_case_to_linklist(0x3D080, 0xF80);
-	
-	sort_raw_log_linklist(raw_log_head);
-	analysis_seq_linklist(seq_log_head);
-	
-	fclose(txtFile);
-	printf("\nCreat LogInfo.txt file OK\n\n");
-
-	free_linklist(shutdown_case_head);
-	free_linklist(wakeup_case_head);
-	
-	return 0;
-}
 
 //========================= Chrome EC command end ==============================
 #endif
