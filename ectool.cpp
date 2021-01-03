@@ -730,9 +730,8 @@ FILE *SDCfgFile = NULL;
 FILE *WUCfgFile = NULL;
 FILE *SDTxtFile = NULL;
 FILE *WUTxtFile = NULL;
-FILE *txtFile = NULL;
-FILE *SDBinFile = NULL;
-FILE *WUBinFile = NULL;
+FILE *txtFile   = NULL;
+FILE *binaryFile =NULL;
 
 
 
@@ -2311,7 +2310,7 @@ int ec_flash_read(uint8_t *buf, int offset, int size)
 	return 0;
 }
 
-int cmd_read_8k_bin(int argc, char *argv[])
+int cmd_read_8k_log(int argc, char *argv[])
 {
 	int offset, size;
 	int rv;
@@ -2336,7 +2335,7 @@ int cmd_read_8k_bin(int argc, char *argv[])
 		return rv;
 	}
 
-	rv = write_file("8k_shutdown_wakeup_case.bin", buf, size);
+	rv = write_file("8k_shutdown_wakeup_cause.bin", buf, size);
 	free(buf);
 	if (rv)
 		return rv;
@@ -2347,220 +2346,91 @@ int cmd_read_8k_bin(int argc, char *argv[])
 
 
 
-int cmd_anay_shutdown_case(int argc, char *argv[])
+int cmd_analysis_log(int argc, char *argv[])
 {
 	int i, rv;
 	char date[32];
-	uint32_t buf[1024];
+	uint32_t buf[2048];
 
+    /********************************************
+    * shutdown cause
+    ********************************************/
 	rv = read_shutdown_case_into_linklist();
 	if(rv < 0)
 	{
 		return rv;
 	}
 	
-	if((SDBinFile = fopen("8k_shutdown_wakeup_case.bin","r")) == NULL)
+	if((binaryFile = fopen("8k_shutdown_wakeup_cause.bin","r")) == NULL)
 	{
-		printf("8k_shutdown_wakeup_case.bin not exist\n\n");
+		printf("8k_shutdown_wakeup_cause.bin not exist\n\n");
 		return -1;
 	}
 
-	//fseek(SDBinFile, 128, SEEK_SET);
-	fread(buf, 4, 1024, SDBinFile);
-
-	SDTxtFile = fopen("shutdown-case.txt","w");
+	fread(buf, 4, 2048, binaryFile);
+    fclose(binaryFile);
+    
+	SDTxtFile = fopen("shutdown-cause.txt","w");
 	if(SDTxtFile == NULL)
 	{
-		printf("Creat shutdown-case.txt file Fail\n\n");
+		printf("Creat shutdown-cause.txt file Fail\n\n");
 		return -1;
 	}
 	
 	for (i = 32; i < 1024; i+=2)
     {
-   		if(buf[i] = 0xffffffff)
+   		if(0xffffffff == buf[i])
 			break;
-		
-    	i++;
-    	sec_to_date(buf[i], date);
+
+        // date and time
+    	sec_to_date(buf[i+1], date);
 		analysis_data(date);
-		fprintf(SDTxtFile, "[ %s ] : %x : ", date, buf[i]);
-		
-		i--;
+		fprintf(SDTxtFile, "[%s] : ID=[%02X], ", date, buf[i]);
+
+        // shutdown cause
 		if( analysis_log_info(shutdown_case_head, buf[i], SDTxtFile) )
 		{
 			fprintf(SDTxtFile, "unkonw log id\n");
 		}
 	}
-
-	fclose(SDTxtFile);
-	printf("Creat shutdown-case.txt file OK\n\n");
-
-	return 0;
-}
-
-
-int cmd_anay_wakeup_case(int argc, char *argv[])
-{
-	int i, rv;
-	char date[32];
-	uint32_t buf[1024];
-
-	rv = read_wakeup_case_into_linklist();
+	printf("Creat shutdown-cause.txt file OK\n\n");
+    fclose(SDTxtFile);
+    
+    /*********************************************
+    * wakeup cause
+    *********************************************/
+    rv = read_wakeup_case_into_linklist();
 	if(rv < 0)
 	{
 		return rv;
 	}
-	
-	if((WUBinFile = fopen("8k_shutdown_wakeup_case.bin","r")) == NULL)
-	{
-		printf("8k_shutdown_wakeup_case.bin not exist\n\n");
-		return -1;
-	}
 
-	fseek(WUBinFile, 4096, SEEK_SET);
-	fread(buf, 4, 1024, WUBinFile);
-
-	WUTxtFile = fopen("wakeup-case.txt","w");
+	WUTxtFile = fopen("wakeup-cause.txt","w");
 	if(WUTxtFile == NULL)
 	{
-		printf("Creat wakeup-case.txt file Fail\n\n");
+		printf("Creat wakeup-cause.txt file Fail\n\n");
 		return -1;
 	}
-	
-	for (i = 32; i < 1024; i+=2)
+
+    for (i = (1024+32); i < 2048; i+=2)
     {
-		if(buf[i] = 0xffffffff)
+		if(0xffffffff == buf[i])
 			break;
-		
-    	i++;
-    	sec_to_date(buf[i], date);
+
+        // date and time
+    	sec_to_date(buf[i+1], date);
 		analysis_data(date);
-		fprintf(WUTxtFile, "[ %s ] : %x : ", date, buf[i]);
-		
-		i--;
+		fprintf(WUTxtFile, "[%s] : ID=[%02X], ", date, buf[i]);
+
+        // wakeup cause
 		if( analysis_log_info(wakeup_case_head, buf[i], WUTxtFile) )
 		{
 			fprintf(WUTxtFile, "unkonw log id\n");
 		}
 	}
-
-	fclose(WUTxtFile);
+    fclose(WUTxtFile);
 	printf("Creat wakeup-case.txt file OK\n\n");
 
-	return 0;
-
-}
-
-
-int cmd_read_shutdown_case(int argc, char *argv[])
-{
-	struct ec_params_flash_read p;
-	int i, rv;
-	uint32_t build_string[4];
-	char date[32];
-	uint32_t offset, size;
-
-	rv = read_shutdown_case_into_linklist();
-	if(rv < 0)
-	{
-		return rv;
-	}
-	printlist(shutdown_case_head);
-
-	SDTxtFile = fopen("shutdown-case.txt","w");
-	if(SDTxtFile == NULL)
-	{
-		printf("Creat shutdown-case.txt file Fail\n\n");
-		return -1;
-	}
-
-	offset = 0x3C080;
-	size = 0xF80;
-	for (i = 0; i < size; i += 16)
-    {
-		p.offset = offset + i;
-		p.size = MIN(size - i, 16);
-
-		rv = ec_command(EC_CMD_FLASH_READ, 0, &p,
-                                sizeof(p), build_string, sizeof(build_string));
-		if (rv < 0)
-        {
-			fprintf(stderr, "Read error at offset %d\n", i);
-			return rv;
-		}
-
-		if(build_string[0] == 0xffffffff)
-			return 0;
-
-		sec_to_date(build_string[1], date);
-		analysis_data(date);
-		printf("[ %s ] : %x : ", date, build_string[0]);
-		fprintf(SDTxtFile, "[ %s ] : %x : ", date, build_string[0]);
-
-		if( analysis_log_info(shutdown_case_head, build_string[0], SDTxtFile) )
-		{
-			printf("unkonw log id\n");
-			fprintf(SDTxtFile, "unkonw log id\n");
-		}
-	}
-	fclose(SDTxtFile);
-	printf("Creat shutdown-case.txt file OK\n\n");
-	free_linklist(shutdown_case_head);
-	
-	return 0;
-}
-
-int cmd_read_wakeup_case(int argc, char *argv[])
-{
-	struct ec_params_flash_read p;
-	int i, rv;
-	uint32_t build_string[4];
-	char date[32];
-	uint32_t offset, size;
-
-	rv = read_wakeup_case_into_linklist();
-	if(rv < 0)
-	{
-		return rv;
-	}
-	printlist(wakeup_case_head);
-
-	WUTxtFile = fopen("wakeup-case.txt","w");
-	if(WUTxtFile == NULL)
-	{
-		printf("Creat wakeup-case.txt file Fail\n\n");
-		return -1;
-	}
-
-	offset = 0x3D080;
-	size = 0xF80;
-	for (i = 0; i < size; i += 16)
-    {
-		p.offset = offset + i;
-		p.size = MIN(size - i, 16);
-
-		rv = ec_command(EC_CMD_FLASH_READ, 0, &p,
-                                sizeof(p), build_string, sizeof(build_string));
-		if (rv < 0)
-        {
-			fprintf(stderr, "Read error at offset %d\n", i);
-			return rv;
-		}
-
-		if(build_string[0] == 0xffffffff)
-			return 0;
-
-		sec_to_date(build_string[1], date);
-		analysis_data(date);
-		printf("[ %s ] : %x : ", date, build_string[0]);
-		fprintf(WUTxtFile, "[ %s ] : %x : ", date, build_string[0]);
-
-		if( analysis_log_info(wakeup_case_head, build_string[0], WUTxtFile) )
-		{
-			printf("unkonw log id\n");
-			fprintf(WUTxtFile, "unkonw log id\n");
-		}
-	}
 	return 0;
 }
 
@@ -4028,6 +3898,8 @@ const struct command Tool_Cmd_Array[] = {
 	//{"inventory", cmd_inventory},
 	{"led", cmd_led},
 	{"loginfo", cmd_log_info},
+	{"logread", cmd_read_8k_log},
+	{"loganalyse", cmd_analysis_log},
 	//{"lightbar", cmd_lightbar},
 	//{"kbfactorytest", cmd_keyboard_factory_test},
 	//{"kbid", cmd_kbid},
@@ -4065,12 +3937,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"pwmsetduty", cmd_pwm_set_duty},
 	//{"rand", cmd_rand},
 	//{"readtest", cmd_read_test},
-	{"read8kbin", cmd_read_8k_bin},
-	{"anayshutdowncase", cmd_anay_shutdown_case},
-	{"anaywakeupcase", cmd_anay_wakeup_case},
-	
-	{"readshutdowncase", cmd_read_shutdown_case},
-	{"readwakeupcase", cmd_read_wakeup_case},
+
 	{"rebootec", cmd_reboot_ec},
 	//{"rollbackinfo", cmd_rollback_info},
 	{"rtcget", cmd_rtc_get},
@@ -4149,6 +4016,10 @@ const char help_str[] =
 	"      Set the color of an LED or query brightness range\n"
 	"  loginfo\n"
 	"  	   read shutdown case and wakeup case from eflash"
+	"  logread\n"
+    "      read flash log\n"
+    "  loganalyse\n"
+    "      analyse flash log shutdown/wakeup \n"
 	"  pwrbtnstart\n"
 	"      detect power button rising and falling count start"
 	"  pwrbtnend\n"
@@ -4161,10 +4032,7 @@ const char help_str[] =
 	"      Prints the number of fans present\n"
 	"  pwmsetfanrpm <targetrpm>\n"
 	"      Set target fan RPM\n"
-    "  readshutdowncause\n"
-    "      readshutdowncause\n"
-    "  readwakeupcause\n"
-    "      readwakeupcause\n"
+    
 	"  reboot_ec <RO|RW|cold|hibernate|hibernate-clear-ap-off|disable-jump>"
 			" [at-shutdown|switch-slot]\n"
 	"      Reboot EC to RO or RW\n"
