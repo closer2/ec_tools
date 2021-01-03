@@ -1271,6 +1271,7 @@ int cmd_board_version(int argc, char *argv[])
 	if (rv < 0)
 		return rv;
 
+	printf("Project version	 : %d\n\n", response.project_version);
 	printf("Board version    : %d\n\n", response.board_version);
 
 	return rv;
