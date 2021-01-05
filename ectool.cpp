@@ -1324,6 +1324,7 @@ int cmd_apreset(int argc, char *argv[])
 
 static int get_num_fans(void)
 {
+	#if 0
 	int idx, rv;
 	struct ec_response_get_features r;
 
@@ -1342,6 +1343,8 @@ static int get_num_fans(void)
 	}
 
 	return idx;
+	#endif
+	return -1;
 }
 
 int cmd_thermal_auto_fan_ctrl(int argc, char *argv[])
@@ -1389,6 +1392,7 @@ int cmd_thermal_auto_fan_ctrl(int argc, char *argv[])
 
 static int print_fan(int idx)
 {
+	#if 0
 	int rv = read_mapped_mem16(EC_MEMMAP_FAN + 2 * idx);
 
 	switch (rv) {
@@ -1403,6 +1407,8 @@ static int print_fan(int idx)
 	}
 
 	return 0;
+	#endif
+	return -1;
 }
 
 int cmd_pwm_get_num_fans(int argc, char *argv[])
@@ -1610,6 +1616,7 @@ int is_string_printable(const char *buf)
 
 int cmd_battery(int argc, char *argv[])
 {
+	#if 0
 	char batt_text[EC_MEMMAP_TEXT_MAX];
 	int rv, val;
 	char *e;
@@ -1706,6 +1713,8 @@ int cmd_battery(int argc, char *argv[])
 cmd_error:
 	fprintf(stderr, "Bad battery info value. Check protocol version.\n\n");
 	return -1;
+	#endif
+	return -1;
 }
 
 int cmd_battery_cut_off(int argc, char *argv[])
@@ -1779,17 +1788,44 @@ int cmd_battery_cut_off(int argc, char *argv[])
 
 int cmd_switches(int argc, char *argv[])
 {
-	uint8_t s = read_mapped_mem8(EC_MEMMAP_SWITCHES);
+	struct ec_switch_funtion p;
+	int i, rv;
+	char *e;
 
-	printf("\nCurrent switches   : 0x%02x\n", s);
-	printf("Lid switch         : %s\n",
-	       (s & EC_SWITCH_LID_OPEN ? "OPEN" : "CLOSED"));
-	printf("Power button       : %s\n",
-	       (s & EC_SWITCH_POWER_BUTTON_PRESSED ? "DOWN" : "UP"));
-	printf("Write protect      : %sABLED\n",
-	       (s & EC_SWITCH_WRITE_PROTECT_DISABLED ? "DIS" : "EN"));
-	printf("Dedicated recovery : %sABLED\n\n",
-	       (s & EC_SWITCH_DEDICATED_RECOVERY ? "EN" : "DIS"));
+	if(argc != 3)
+	{
+		fprintf(stderr,
+			"Usage: %s <type> <switch>\n", argv[0]);
+	}
+
+	if(!strcmp("powerled", argv[1]))
+		p.type = 0x01;
+	else if(!strcmp("wakeonlan", argv[1]))
+		p.type = 0x02;
+	else if(!strcmp("wakeonwlan", argv[1]))
+		p.type = 0x03;
+	else 
+	{
+		fprintf(stderr, "Bad type name: %s\n", argv[1]);
+		fprintf(stderr, "Valid type names: powerled | "
+						 "wakeonwlan | wakeonwlan\n");
+		return -1;
+	}
+	
+	if(!strcmp("on", argv[2]))
+		p.switchi = 0x01;
+	else if(!strcmp("off", argv[2]))
+		p.switchi = 0x02;
+	else
+	{
+		fprintf(stderr, "Bad switchi name: %s\n", argv[1]);
+		fprintf(stderr, "Valid switchi names: on | off\n");
+		return -1;
+	}
+
+	rv = ec_command(EC_CMD_SWITCH_FUNTION, 0, &p, sizeof(p), NULL, 0);
+	if (rv < 0)
+			return rv;
 
 	return 0;
 }
@@ -3120,6 +3156,7 @@ int cmd_power_info(int argc, char *argv[])
 
 int read_mapped_temperature(int id)
 {
+	#if 0
 	int rv;
 
 	if (!read_mapped_mem8(EC_MEMMAP_THERMAL_VERSION)) {
@@ -3138,6 +3175,8 @@ int read_mapped_temperature(int id)
 		rv = EC_TEMP_SENSOR_NOT_PRESENT;
 	}
 	return rv;
+	#endif
+	return -1;
 }
 
 int cmd_temperature(int argc, char *argv[])
