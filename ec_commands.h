@@ -113,6 +113,9 @@ extern "C" {
 #define EC_MEMMAP_SIZE         255 /* ACPI IO buffer max is 255 bytes */
 #define EC_MEMMAP_TEXT_MAX     8   /* Size of a string in the memory map */
 
+/******************************************************************************/
+/***************************** EC Share RAM Define ****************************/
+/******************************************************************************/
 /* The offset address of each type of data in mapped memory. */
 #define EC_MEMMAP_VERSION_X                 0x00 /* EC_VERSION_X */
 #define EC_MEMMAP_VERSION_YZ                0x01 /* EC_VERSION_YZ */
@@ -161,36 +164,34 @@ extern "C" {
 #define EC_MEMMAP_POLLING_WRITE     BIT(4) /* Start polling write PL1/2 */
 #define EC_MEMMAP_WRITE_PL4         BIT(5) /* Write PL4 request */
 #define EC_MEMMAP_TIME_UPDATE       BIT(6) /* BIOS set this BIT when time update to EC */  
-#define EC_MEMMAP_BATTERY1_DAMAGED  BIT(7) /* Battery 1 damaged */ 
+#define EC_MEMMAP_BATTERY1_DAMAGED  BIT(7) /* Battery 1 damaged */
+
 /* Unused 0x1E -0x1F */
-/* SOC NTC CORE_TEMP Temp(0-127 C) offset:0x20, 
- * SOC NTC CPU_SOC_TEMP Temp(0-127 C) offset:0x21, 
- * Near SSD NTC(0-127 C) offset:0x22, 
- * Near PCIEX16 NTC(0-127 C) offset:0x23, 
- * Environment NTC(0-127 C) offset:0x24,
- * Memory near NTC(0-127 C) offset:0x25,
- * CHARGER NTC Temperature(0-127 C) offset:0x26,
- * Battery 1 temp(0-127 C) offset:0x27 */  
-#define EC_MEMMAP_TEMP_SENSOR               0x20  
-/* Unused 0x28 -0x2F */
-#define EC_MEMMAP_TBATTERY_DEVICE           0x30 /* Battery device name (15 bytes) 0x30-0x3e */  
-#define EC_MEMMAP_TBATTERY_COUNTER          0x3f /* Byte counter of Battery deivce name */ 
-/* Unused 0x40 -0x43 */
-#define EC_MEMMAP_SLOW_POWER                0x44 /* Slow Power */ 
-#define EC_MEMMAP_FAST_POWER                0x45 /* Fast Power */  
-#define EC_MEMMAP_SUSTAINED_POWER           0x46 /* SUSTAINED POWER */ 
-#define EC_MEMMAP_THERMAL_CONTROL_LIMIT     0x47 /* Thermal Control Limit */ 
-/* Unused 0x48 -0x4B */
-#define EC_MEMMAP_TYPEC_UP_LIMIT            0x4C /* Up limitation of TYPE-C */ 
-#define EC_MEMMAP_TYPEC_DOWN_LIMIT          0x4D /* Down limitation of TYPE-C */ 
-#define EC_MEMMAP_CHARGER_UP_LIMIT          0x4E /* Up limitation of CHARGER */ 
-#define EC_MEMMAP_CHARGER_DOWN_LIMIT        0x4F /* Down limitation of CHARGER */ 
-/* Unused 0x50 -0x53 */
-#define EC_MEMMAP_SET_POWER_BUTTON_TIME     0x54 /* Set power button de-bounce time by APP */ 
-#define EC_MEMMAP_GET_POWER_BUTTON_TIME     0x55 /* Get power button last pressed time */
+
+/* Sensor temperature, offset 0x20--0x2F */
+#define EC_MEMMAP_TEMP_SENSOR_00            0x20 /* CPU internal */
+#define EC_MEMMAP_TEMP_SENSOR_01            0x21 /* CPU external */
+#define EC_MEMMAP_TEMP_SENSOR_02            0x22 /* GPU internal */
+#define EC_MEMMAP_TEMP_SENSOR_03            0x23 /* GPU external */
+#define EC_MEMMAP_TEMP_SENSOR_04            0x24 /* Environment */
+#define EC_MEMMAP_TEMP_SENSOR_05            0x25 /* SSD */
+#define EC_MEMMAP_TEMP_SENSOR_06            0x26 /* Memory */
+#define EC_MEMMAP_TEMP_SENSOR_07            0x27 /* Battery */
+#define EC_MEMMAP_TEMP_SENSOR_08            0x28 /* Charger */
+#define EC_MEMMAP_TEMP_SENSOR_09            0x29 /* Type-C port-0 */
+#define EC_MEMMAP_TEMP_SENSOR_0A            0x2A /* Type-C port-1 */
+#define EC_MEMMAP_TEMP_SENSOR_0B            0x2B
+#define EC_MEMMAP_TEMP_SENSOR_0C            0x2C
+#define EC_MEMMAP_TEMP_SENSOR_0D            0x2D
+#define EC_MEMMAP_TEMP_SENSOR_0E            0x2E
+#define EC_MEMMAP_TEMP_SENSOR_0F            0x2F
+#define EC_MEMMAP_TEMP_SENSOR               EC_MEMMAP_TEMP_SENSOR_00
+
+/* Unused 0x30 -0x53 */
+
 /* SYS Fan RPM (High byte 0x56,Low byte 0x57),
  * CPU Fan RPM (High byte 0x58,Low byte 0x59). */
-#define EC_MEMMAP_FAN_RPM                   0x56  
+#define EC_MEMMAP_FAN_RPM                   0x56
 /* Unused 0x5A -0x5B Standby application Fan */
 #define EC_MEMMAP_TEMP_CPU_UP_LIMIT         0x5C /* Up limitation of CPU Temperature */ 
 #define EC_MEMMAP_TEMP_CPU_DOWN_LIMIT       0x5D /* Down limitation of CPU Temperature */ 
@@ -198,6 +199,7 @@ extern "C" {
 #define EC_MEMMAP_TEMP_DDR_DOWN_LIMIT       0x5F /* Down limitation of DDR Temperature */ 
 #define EC_MEMMAP_TEMP_SOC_UP_LIMIT         0x60 /* Up limitation of SOC Temperature */ 
 #define EC_MEMMAP_TEMP_SOC_DOWN_LIMIT       0x61 /* Down limitation of SOC Temperature */ 
+
 /* Unused 0x62 -0x65 */
 #define EC_MEMMAP_THERM_FLAG_UPB            0x66 /* ThermFlagUpB */ 
 #define EC_MEMMAP_THERM_FLAG_UPB0     BIT(0) /* Set CPU Up flag to 1, let EC to verify */
@@ -249,12 +251,6 @@ extern "C" {
 
 /* Number of temp sensors at EC_MEMMAP_TEMP_SENSOR */
 #define EC_TEMP_SENSOR_ENTRIES     8
-/*
- * Number of temp sensors at EC_MEMMAP_TEMP_SENSOR_B.
- *
- * Valid only if EC_MEMMAP_THERMAL_VERSION returns >= 2.
- */
-#define EC_TEMP_SENSOR_B_ENTRIES      8
 
 /* Special values for mapped temperature sensors */
 #define EC_TEMP_SENSOR_NOT_PRESENT    0xff

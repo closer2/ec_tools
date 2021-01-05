@@ -3156,6 +3156,20 @@ int cmd_power_info(int argc, char *argv[])
 
 int read_mapped_temperature(int id)
 {
+	int rv;
+	if (id < EC_TEMP_SENSOR_ENTRIES)
+	{
+		rv = read_mapped_mem8(EC_MEMMAP_TEMP_SENSOR + id);
+	}
+	else 
+	{
+		/* Sensor in second bank, but second bank isn't supported */
+		rv = EC_TEMP_SENSOR_NOT_PRESENT;
+	}
+
+	return rv;
+
+
 	#if 0
 	int rv;
 
@@ -3176,7 +3190,6 @@ int read_mapped_temperature(int id)
 	}
 	return rv;
 	#endif
-	return -1;
 }
 
 int cmd_temperature(int argc, char *argv[])
@@ -3195,7 +3208,7 @@ int cmd_temperature(int argc, char *argv[])
     {
         printf(" Thermal Sensor list :\n");
 		for (id = 0;
-		     id < EC_TEMP_SENSOR_ENTRIES + EC_TEMP_SENSOR_B_ENTRIES;
+		     id < EC_TEMP_SENSOR_ENTRIES;
 		     id++) {
 			rv = read_mapped_temperature(id);
 			switch (rv) {
@@ -3226,7 +3239,7 @@ int cmd_temperature(int argc, char *argv[])
 	}
 
 	if (id < 0 ||
-	    id >= EC_TEMP_SENSOR_ENTRIES + EC_TEMP_SENSOR_B_ENTRIES) {
+	    id >= EC_TEMP_SENSOR_ENTRIES) {
 		printf("Sensor ID invalid.\n");
 		return -1;
 	}
@@ -3271,7 +3284,7 @@ int cmd_temp_sensor_info(int argc, char *argv[])
     {
         printf(" Thermal Sensor list :\n");
 		for (p.id = 0;
-		     p.id < EC_TEMP_SENSOR_ENTRIES + EC_TEMP_SENSOR_B_ENTRIES;
+		     p.id < EC_TEMP_SENSOR_ENTRIES;
 		     p.id++) {
 			if (read_mapped_temperature(p.id) ==
 			    EC_TEMP_SENSOR_NOT_PRESENT)
