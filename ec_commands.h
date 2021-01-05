@@ -114,47 +114,126 @@ extern "C" {
 #define EC_MEMMAP_TEXT_MAX     8   /* Size of a string in the memory map */
 
 /* The offset address of each type of data in mapped memory. */
-#define EC_MEMMAP_TEMP_SENSOR      0x00 /* Temp sensors 0x00 - 0x0f */
-#define EC_MEMMAP_FAN              0x10 /* Fan speeds 0x10 - 0x17 */
-#define EC_MEMMAP_TEMP_SENSOR_B    0x18 /* More temp sensors 0x18 - 0x1f */
-#define EC_MEMMAP_ID               0x20 /* 0x20 == 'E', 0x21 == 'C' */
-#define EC_MEMMAP_ID_VERSION       0x22 /* Version of data in 0x20 - 0x2f */
-#define EC_MEMMAP_THERMAL_VERSION  0x23 /* Version of data in 0x00 - 0x1f */
-#define EC_MEMMAP_BATTERY_VERSION  0x24 /* Version of data in 0x40 - 0x7f */
-#define EC_MEMMAP_SWITCHES_VERSION 0x25 /* Version of data in 0x30 - 0x33 */
-#define EC_MEMMAP_EVENTS_VERSION   0x26 /* Version of data in 0x34 - 0x3f */
-#define EC_MEMMAP_HOST_CMD_FLAGS   0x27 /* Host cmd interface flags (8 bits) */
-/* Unused 0x28 - 0x2f */
-#define EC_MEMMAP_SWITCHES         0x30	/* 8 bits */
-/* Unused 0x31 - 0x33 */
-#define EC_MEMMAP_HOST_EVENTS      0x34 /* 64 bits */
-/* Battery values are all 32 bits, unless otherwise noted. */
-#define EC_MEMMAP_BATT_VOLT        0x40 /* Battery Present Voltage */
-#define EC_MEMMAP_BATT_RATE        0x44 /* Battery Present Rate */
-#define EC_MEMMAP_BATT_CAP         0x48 /* Battery Remaining Capacity */
-#define EC_MEMMAP_BATT_FLAG        0x4c /* Battery State, see below (8-bit) */
-#define EC_MEMMAP_BATT_COUNT       0x4d /* Battery Count (8-bit) */
-#define EC_MEMMAP_BATT_INDEX       0x4e /* Current Battery Data Index (8-bit) */
-/* Unused 0x4f */
-#define EC_MEMMAP_BATT_DCAP        0x50 /* Battery Design Capacity */
-#define EC_MEMMAP_BATT_DVLT        0x54 /* Battery Design Voltage */
-#define EC_MEMMAP_BATT_LFCC        0x58 /* Battery Last Full Charge Capacity */
-#define EC_MEMMAP_BATT_CCNT        0x5c /* Battery Cycle Count */
-/* Strings are all 8 bytes (EC_MEMMAP_TEXT_MAX) */
-#define EC_MEMMAP_BATT_MFGR        0x60 /* Battery Manufacturer String */
-#define EC_MEMMAP_BATT_MODEL       0x68 /* Battery Model Number String */
-#define EC_MEMMAP_BATT_SERIAL      0x70 /* Battery Serial Number String */
-#define EC_MEMMAP_BATT_TYPE        0x78 /* Battery Type String */
-#define EC_MEMMAP_ALS              0x80 /* ALS readings in lux (2 X 16 bits) */
-/* Unused 0x84 - 0x8f */
-#define EC_MEMMAP_ACC_STATUS       0x90 /* Accelerometer status (8 bits )*/
-/* Unused 0x91 */
-#define EC_MEMMAP_ACC_DATA         0x92 /* Accelerometers data 0x92 - 0x9f */
-/* 0x92: Lid Angle if available, LID_ANGLE_UNRELIABLE otherwise */
-/* 0x94 - 0x99: 1st Accelerometer */
-/* 0x9a - 0x9f: 2nd Accelerometer */
-#define EC_MEMMAP_GYRO_DATA        0xa0 /* Gyroscope data 0xa0 - 0xa5 */
-/* Unused 0xa6 - 0xdf */
+#define EC_MEMMAP_VERSION_X                 0x00 /* EC_VERSION_X */
+#define EC_MEMMAP_VERSION_YZ                0x01 /* EC_VERSION_YZ */
+#define EC_MEMMAP_VERSION_TEST              0x02 /* EC_VERSION_TEST */
+/* Unused 0x03 */
+#define EC_MEMMAP_Year                      0x04 /* EC_Year */
+#define EC_MEMMAP_Month                     0x05 /* EC_Month */
+#define EC_MEMMAP_Day                       0x06 /* EC_Day */
+/* Unused 0x07 - 0x0B */
+#define EC_MEMMAP_POST_WATCHDOG_COUNTER     0x0C /* BIOS POST watchd1og counter */
+#define EC_MEMMAP_POST_WATCHDOG_TIMES       0x0D /* BIOS POST watchdog re-try times */ 
+/* Unused 0x0E - 0x0F */
+#define EC_MEMMAP_DEVICE_CONTROL_REG        0x10 /* Device Control register */ 
+#define EC_MEMMAP_LID_STATUS        BIT(0) /* 1:LID closed;0:LID open */
+/* Unused 0x11 */
+#define EC_MEMMAP_POWER_FLAG1               0x12 /* EC power flag 1 */ 
+#define EC_MEMMAP_POWER_LOCK        BIT(7) /* 1:Lock power button */
+/* Unused 0x13 -0x14 */
+#define EC_MEMMAP_KEYBOARD_CONTROL          0x15 /* Keyboard control flag */ 
+#define EC_MEMMAP_FNKEY_INVERSE     BIT(0) /* FN key inverse status: 1 => inverse, 0 => not inverse. */
+#define EC_MEMMAP_FNKEY_LOCK        BIT(1) /* Fn key lock: 1 => Fn key locked, 0 => Fn key unlocked. */
+#define EC_MEMMAP_WINKEY_STATUS     BIT(4) /* win key status, 1 = disable, 0 = enable. */
+#define EC_MEMMAP_FAN_MODE          BIT(6) /* Fan turbo mode, 1:Fan turbo on. 0:Fan turbo off. */
+#define EC_MEMMAP_DEVICE_STATUS             0x16 /* Device status */ 
+#define EC_MEMMAP_MIC_MODE          BIT(4) /* 1:Microphone mute, 0:Mic un-mute. */
+#define EC_MEMMAP_LEDERROR_CONTROL          0x17 /* EC Error LED control */ 
+#define EC_MEMMAP_KBB1IDTIME_HBYTE          0x18 /* KbBlIdleTime High Byte */ 
+#define EC_MEMMAP_KBB1IDTIME_LBYTE          0x19 /* KbBlIdleTime Low Byte */ 
+#define EC_MEMMAP_SYS_MISC1                 0x1A /* SYS_MISC1 */ 
+#define EC_MEMMAP_NC0               BIT(0) /* NC0 */
+#define EC_MEMMAP_NC1               BIT(1) /* NC1 */
+#define EC_MEMMAP_NMI_TRIGGER       BIT(2) /* NMI_TRIGGER: 1 => Trigger NMI# */
+#define EC_MEMMAP_SYS_MISC2                 0x1B /* SYS_MISC2 */ 
+#define EC_MEMMAP_AC_ADAPTER_FLAG   BIT(0) /* AC adapter Status (0:Off-line;1:On-line) */ 
+#define EC_MEMMAP_SYS_MISC3                 0x1C /* status/flag. */ 
+#define EC_MEMMAP_SHOP_MODE         BIT(1) /* Shop mode of thermal table */
+#define EC_MEMMAP_NC2               BIT(3) /* NC1 */
+#define EC_MEMMAP_WATCHDOG_EN       BIT(4) /* EC watchdog, 1=enable, 0=disable. (for S0). */
+#define EC_MEMMAP_WATCHDOG_TO       BIT(5) /* EC watchdog timeout behavior, 1=shutdown, 0=trigger NMI.*/
+#define EC_MEMMAP_WATCHDOG_BIOS_EN  BIT(7) /* 1:BIOS watchdog for S0 to S3/S4/S5 enabled (EC will clear after received)  */
+#define EC_MEMMAP_SYS_MISC4                 0x1D /* status/flag. */ 
+#define EC_MEMMAP_CHECK_CTDP        BIT(0) /* Check cTDP change request */
+#define EC_MEMMAP_WRITE_PL1         BIT(1) /* Write PL1 request. */
+#define EC_MEMMAP_WRITE_PL2         BIT(2) /* Write PL2 request. */
+#define EC_MEMMAP_POLLING_READ      BIT(3) /* Start polling read  PL1/2 */
+#define EC_MEMMAP_POLLING_WRITE     BIT(4) /* Start polling write PL1/2 */
+#define EC_MEMMAP_WRITE_PL4         BIT(5) /* Write PL4 request */
+#define EC_MEMMAP_TIME_UPDATE       BIT(6) /* BIOS set this BIT when time update to EC */  
+#define EC_MEMMAP_BATTERY1_DAMAGED  BIT(7) /* Battery 1 damaged */ 
+/* Unused 0x1E -0x1F */
+/* SOC NTC CORE_TEMP Temp(0-127 C) offset:0x20, 
+ * SOC NTC CPU_SOC_TEMP Temp(0-127 C) offset:0x21, 
+ * Near SSD NTC(0-127 C) offset:0x22, 
+ * Near PCIEX16 NTC(0-127 C) offset:0x23, 
+ * Environment NTC(0-127 C) offset:0x24,
+ * Memory near NTC(0-127 C) offset:0x25,
+ * CHARGER NTC Temperature(0-127 C) offset:0x26,
+ * Battery 1 temp(0-127 C) offset:0x27 */  
+#define EC_MEMMAP_TEMP_SENSOR               0x20  
+/* Unused 0x28 -0x2F */
+#define EC_MEMMAP_TBATTERY_DEVICE           0x30 /* Battery device name (15 bytes) 0x30-0x3e */  
+#define EC_MEMMAP_TBATTERY_COUNTER          0x3f /* Byte counter of Battery deivce name */ 
+/* Unused 0x40 -0x43 */
+#define EC_MEMMAP_SLOW_POWER                0x44 /* Slow Power */ 
+#define EC_MEMMAP_FAST_POWER                0x45 /* Fast Power */  
+#define EC_MEMMAP_SUSTAINED_POWER           0x46 /* SUSTAINED POWER */ 
+#define EC_MEMMAP_THERMAL_CONTROL_LIMIT     0x47 /* Thermal Control Limit */ 
+/* Unused 0x48 -0x4B */
+#define EC_MEMMAP_TYPEC_UP_LIMIT            0x4C /* Up limitation of TYPE-C */ 
+#define EC_MEMMAP_TYPEC_DOWN_LIMIT          0x4D /* Down limitation of TYPE-C */ 
+#define EC_MEMMAP_CHARGER_UP_LIMIT          0x4E /* Up limitation of CHARGER */ 
+#define EC_MEMMAP_CHARGER_DOWN_LIMIT        0x4F /* Down limitation of CHARGER */ 
+/* Unused 0x50 -0x53 */
+#define EC_MEMMAP_SET_POWER_BUTTON_TIME     0x54 /* Set power button de-bounce time by APP */ 
+#define EC_MEMMAP_GET_POWER_BUTTON_TIME     0x55 /* Get power button last pressed time */
+/* SYS Fan RPM (High byte 0x56,Low byte 0x57),
+ * CPU Fan RPM (High byte 0x58,Low byte 0x59). */
+#define EC_MEMMAP_FAN_RPM                   0x56  
+/* Unused 0x5A -0x5B Standby application Fan */
+#define EC_MEMMAP_TEMP_CPU_UP_LIMIT         0x5C /* Up limitation of CPU Temperature */ 
+#define EC_MEMMAP_TEMP_CPU_DOWN_LIMIT       0x5D /* Down limitation of CPU Temperature */ 
+#define EC_MEMMAP_TEMP_DDR_UP_LIMIT         0x5E /* Up limitation of DDR Temperature */ 
+#define EC_MEMMAP_TEMP_DDR_DOWN_LIMIT       0x5F /* Down limitation of DDR Temperature */ 
+#define EC_MEMMAP_TEMP_SOC_UP_LIMIT         0x60 /* Up limitation of SOC Temperature */ 
+#define EC_MEMMAP_TEMP_SOC_DOWN_LIMIT       0x61 /* Down limitation of SOC Temperature */ 
+/* Unused 0x62 -0x65 */
+#define EC_MEMMAP_THERM_FLAG_UPB            0x66 /* ThermFlagUpB */ 
+#define EC_MEMMAP_THERM_FLAG_UPB0     BIT(0) /* Set CPU Up flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_UPB1     BIT(1) /* Set Battery Up flag to 1, let EC to verify*/
+#define EC_MEMMAP_THERM_FLAG_UPB2     BIT(2) /* Set SYS Up flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_UPB3     BIT(3) /* Set DDR Up flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_UPB4     BIT(4) /* Set PCH Up flag to 1, let EC to verify*/
+#define EC_MEMMAP_THERM_FLAG_UPB5     BIT(5) /* Set SOC Up flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_UPB6     BIT(6) /* Set Charger Up flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_UPB7     BIT(7) /* Check cTDP change request */
+#define EC_MEMMAP_THERM_FLAG_DNB            0x67 /* ThermFlagDnB */ 
+#define EC_MEMMAP_THERM_FLAG_DNB0     BIT(0) /* Set CPU Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB1     BIT(1) /* Set Battery Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB2     BIT(2) /* Set SYS Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB3     BIT(3) /* Set DDR Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB4     BIT(4) /* Set PCH Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB5     BIT(5) /* Set SOC Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB6     BIT(6) /* Set Type-C Down flag to 1, let EC to verify */
+#define EC_MEMMAP_THERM_FLAG_DNB7     BIT(7) /* Set Charger Down flag to 1, let EC to verify */
+/* Unused 0x68 */
+#define EC_MEMMAP_TRIGGER_UP_EVENT         0x69 /* EC set bit0-bit5 for trigger up event */ 
+#define EC_MEMMAP_EVENT_CPU           BIT(0) /* CPU event */
+#define EC_MEMMAP_EVENT_BAT           BIT(1) /* Bat event */
+#define EC_MEMMAP_EVENT_LOCAL         BIT(2) /* Local event */
+#define EC_MEMMAP_EVENT_DDR           BIT(3) /* DDR event */
+#define EC_MEMMAP_EVENT_REMOTE        BIT(4) /* Remote event */
+#define EC_MEMMAP_EVENT_SOC           BIT(5) /* SOC event */
+#define EC_MEMMAP_EVENT_TYPEC         BIT(6) /* CPU event */
+#define EC_MEMMAP_EVENT_CHARGER       BIT(7) /* Charger event */
+#define EC_MEMMAP_WATCHDOG_TIMEOUT         0x70 /* EC watchdog timeout high byte(0x70), low byte(0x71) */ 
+#define EC_MEMMAP_SHUTDOWN_CAUSE           0x72 /* ShutDown Cause */ 
+#define EC_MEMMAP_WAKEUP_CAUSE             0x73 /* Wakeup Cause */ 
+#define EC_MEMMAP_S4S5_RESTORE             0x74 /* S4/S5 restore for EC 1 Byte */ 
+#define EC_MEMMAP_HOST_CMD_FLAGS           0x75 /* Host cmd interface flags (8 bits) */
+#define EC_MEMMAP_HOST_EVENTS              0x76 /* 64 bits */
+/* Unused 0x77 - 0xdf */
 
 /*
  * ACPI is unable to access memory mapped data at or above this offset due to
@@ -169,7 +248,7 @@ extern "C" {
 #define EC_MEMMAP_ACC_STATUS_PRESENCE_BIT    BIT(7)
 
 /* Number of temp sensors at EC_MEMMAP_TEMP_SENSOR */
-#define EC_TEMP_SENSOR_ENTRIES     16
+#define EC_TEMP_SENSOR_ENTRIES     8
 /*
  * Number of temp sensors at EC_MEMMAP_TEMP_SENSOR_B.
  *
@@ -198,9 +277,7 @@ extern "C" {
  * has not been read this boot.  This is a reasonable number to avoid
  * triggering alarms on the host.
  */
-#define EC_TEMP_SENSOR_DEFAULT     (296 - EC_TEMP_SENSOR_OFFSET)
-
-#define EC_FAN_SPEED_ENTRIES       4       /* Number of fans at EC_MEMMAP_FAN */
+#define EC_FAN_SPEED_ENTRIES       3       /* Number of fans at EC_MEMMAP_FAN */
 #define EC_FAN_SPEED_NOT_PRESENT   0xffff  /* Entry not present */
 #define EC_FAN_SPEED_STALLED       0xfffe  /* Fan stalled */
 
