@@ -2639,6 +2639,8 @@ int cmd_reboot_ec(int argc, char *argv[])
 		p.cmd = EC_REBOOT_HIBERNATE;
 	else if (!strcmp(argv[1], "hibernate-clear-ap-off"))
 		p.cmd = EC_REBOOT_HIBERNATE_CLEAR_AP_OFF;
+	else if (!strcmp(argv[1], "cold-ap-off"))
+			p.cmd = EC_REBOOT_COLD_AP_OFF;
 	else {
 		fprintf(stderr, "Unknown command: %s\n", argv[1]);
 		return -1;
@@ -4152,7 +4154,7 @@ const char help_str[] =
 	"  pwmsetfanrpm <targetrpm>\n"
 	"      Set target fan RPM\n"
     
-	"  reboot_ec <RO|RW|cold|hibernate|hibernate-clear-ap-off|disable-jump>"
+	"  rebootec <RO|RW|cold|cold-ap-off|hibernate|hibernate-clear-ap-off|disable-jump>"
 			" [at-shutdown|switch-slot]\n"
 	"      Reboot EC to RO or RW\n"
 	"  rtcget\n"
