@@ -3542,6 +3542,21 @@ struct ec_response_flash_log {
 	uint32_t log_timestamp;
 } __ec_align4;
 
+struct ec_params_mfg_data{
+	uint8_t index;
+	uint8_t data;
+} __ec_align1;
+
+struct ec_response_mfg_data{
+	uint8_t index;
+	uint8_t data;
+} __ec_align1;
+
+/* These all use ec_params_mfg_data */
+#define EC_CMD_FLASH_GET_MFG_DATA 0x0058
+#define EC_CMD_FLASH_SET_MFG_DATA 0x0059
+
+
 /*****************************************************************************/
 
 /* MKBP - Matrix KeyBoard Protocol */

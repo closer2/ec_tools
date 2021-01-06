@@ -2546,6 +2546,69 @@ int cmd_analysis_log(int argc, char *argv[])
 	return 0;
 }
 
+
+int cmd_mfg_data_read(int argc, char *argv[])
+{
+	struct ec_params_mfg_data p;
+	struct ec_response_mfg_data r;
+	char *e;
+	int rv;
+	
+	if (argc != 2) {
+		fprintf(stderr,"Usage: %s <index>\n", argv[0]);
+		return -1;
+	}
+
+	p.index = strtol(argv[1], &e, 0);
+	if (e && *e)
+    {
+		fprintf(stderr, "Bad index.\n");
+		return -1;
+	}
+	
+	rv = ec_command(EC_CMD_FLASH_GET_MFG_DATA, 0, &p, sizeof(p), &r, sizeof(r));
+	if (rv < 0)
+		return rv;
+	
+	printf("index 0x%02x data = 0x%02x\n", p.index, r.data);
+	return 0;
+}
+
+int cmd_mfg_data_write(int argc, char *argv[])
+{
+	struct ec_params_mfg_data p;
+	struct ec_response_mfg_data r;
+	char *e;
+	int rv;
+	
+	if (argc != 3) {
+		fprintf(stderr,"Usage: %s <index> <data>\n", argv[0]);
+		return -1;
+	}
+
+	p.index = strtol(argv[1], &e, 0);
+	if (e && *e)
+	{
+		fprintf(stderr, "Bad index.\n");
+		return -1;
+	}
+	
+	p.data = strtol(argv[2], &e, 0);
+	if (e && *e)
+	{
+		fprintf(stderr, "Bad data.\n");
+		return -1;
+	}
+	
+	rv = ec_command(EC_CMD_FLASH_SET_MFG_DATA, 0, &p, sizeof(p), &r, sizeof(r));
+	if (rv < 0)
+		return rv;
+	
+	printf("write 0x%02x in 0x%02x success!\n", p.data, p.index);
+	return 0;	
+}
+
+
 int cmd_reboot_ec(int argc, char *argv[])
 {
 	struct ec_params_reboot_ec p;
@@ -3950,6 +4013,8 @@ const struct command Tool_Cmd_Array[] = {
 	{"loginfo", cmd_log_info},
 	{"logread", cmd_read_8k_log},
 	{"loganalyse", cmd_analysis_log},
+	{"mfgdataread", cmd_mfg_data_read},
+	{"mfgdatawrite", cmd_mfg_data_write},
 	//{"lightbar", cmd_lightbar},
 	//{"kbfactorytest", cmd_keyboard_factory_test},
 	//{"kbid", cmd_kbid},
@@ -4070,6 +4135,10 @@ const char help_str[] =
     "      read flash log\n"
     "  loganalyse\n"
     "      analyse flash log shutdown/wakeup \n"
+    "  mfgdataread\n"
+    "      read mfg data \n"
+    "  mfgdatawrite\n"
+    "      write mfg data \n"
 	"  pwrbtnstart\n"
 	"      detect power button rising and falling count start"
 	"  pwrbtnend\n"
