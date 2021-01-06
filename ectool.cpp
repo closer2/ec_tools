@@ -1324,7 +1324,6 @@ int cmd_apreset(int argc, char *argv[])
 
 static int get_num_fans(void)
 {
-	#if 0
 	int idx, rv;
 	struct ec_response_get_features r;
 
@@ -1337,14 +1336,12 @@ static int get_num_fans(void)
 		return 0;
 
 	for (idx = 0; idx < EC_FAN_SPEED_ENTRIES; idx++) {
-		rv = read_mapped_mem16(EC_MEMMAP_FAN + 2 * idx);
+		rv = read_mapped_mem16(EC_MEMMAP_FAN_RPM + 2 * idx);
 		if (rv == EC_FAN_SPEED_NOT_PRESENT)
 			break;
 	}
 
 	return idx;
-	#endif
-	return -1;
 }
 
 int cmd_thermal_auto_fan_ctrl(int argc, char *argv[])
@@ -1392,8 +1389,7 @@ int cmd_thermal_auto_fan_ctrl(int argc, char *argv[])
 
 static int print_fan(int idx)
 {
-	#if 0
-	int rv = read_mapped_mem16(EC_MEMMAP_FAN + 2 * idx);
+	int rv = read_mapped_mem16(EC_MEMMAP_FAN_RPM + 2 * idx);
 
 	switch (rv) {
 	case EC_FAN_SPEED_NOT_PRESENT:
@@ -1407,8 +1403,6 @@ static int print_fan(int idx)
 	}
 
 	return 0;
-	#endif
-	return -1;
 }
 
 int cmd_pwm_get_num_fans(int argc, char *argv[])
