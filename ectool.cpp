@@ -2640,6 +2640,35 @@ int cmd_mfg_mode(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_ODM_version(int argc, char *argv[])
+{
+	if (argc > 2) {
+		fprintf(stderr,"Usage: %s\n", argv[0]);
+		return -1;
+	}
+
+	if (!strcmp(argv[1], "help"))
+	{
+		printf("------------------------------------------------------------------------\n");
+		printf("*	ODM EC version define\n");
+		printf("*	BLD_EC_VERSION_X :\n");
+		printf("*				0:non-shipping version\n");
+		printf("*				1:shipping version\n\n");
+		printf("*	BLD_EC_VERSION_YZ :\n");
+		printf("*			 if VERSION_X=0, EVT(01~4F)/DVT(50~7F)/Reserved(80~FF)\n");
+		printf("*			 if VERSION_X=1, Just increase in order\n\n");
+		printf("*	BLD_EC_VERSION_TEST :\n");
+		printf("*			 EC test version for ODM debug\n");
+		printf("------------------------------------------------------------------------\n\n");
+	}
+
+	printf("BLD_EC_VERSION_X : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_X));
+	printf("BLD_EC_VERSION_YZ : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
+	printf("BLD_EC_VERSION_TEST : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_TEST));
+
+	return 0;
+}
+
 int cmd_reboot_ec(int argc, char *argv[])
 {
 	struct ec_params_reboot_ec p;
@@ -4113,6 +4142,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"mkbpwakemask", cmd_mkbp_wake_mask},
 	//{"motionsense", cmd_motionsense},
 	//{"nextevent", cmd_next_event},
+	{"odmversion", cmd_ODM_version},
 	//{"panicinfo", cmd_panic_info},
 	//{"pause_in_s5", cmd_s5},
 	//{"pdgetmode", cmd_pd_get_amode},
@@ -4229,6 +4259,8 @@ const char help_str[] =
     "      write mfg data \n"
     "  mfgmode <on | off>\n"    
 	"	   read MFG status or turn on/off MFG mode\n"
+	"  odmversion\n"
+	"      read ODM EC version\n"
 	"  pwrbtnstart\n"
 	"      detect power button rising and falling count start"
 	"  pwrbtnend\n"
