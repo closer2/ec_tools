@@ -139,8 +139,10 @@ extern "C" {
 #define EC_MEMMAP_FNKEY_LOCK        BIT(1) /* Fn key lock: 1 => Fn key locked, 0 => Fn key unlocked. */
 #define EC_MEMMAP_WINKEY_STATUS     BIT(4) /* win key status, 1 = disable, 0 = enable. */
 #define EC_MEMMAP_FAN_MODE          BIT(6) /* Fan turbo mode, 1:Fan turbo on. 0:Fan turbo off. */
+
 #define EC_MEMMAP_DEVICE_STATUS             0x16 /* Device status */ 
 #define EC_MEMMAP_MIC_MODE          BIT(4) /* 1:Microphone mute, 0:Mic un-mute. */
+
 #define EC_MEMMAP_LEDERROR_CONTROL          0x17 /* EC Error LED control */ 
 #define EC_MEMMAP_KBB1IDTIME_HBYTE          0x18 /* KbBlIdleTime High Byte */ 
 #define EC_MEMMAP_KBB1IDTIME_LBYTE          0x19 /* KbBlIdleTime Low Byte */ 
@@ -148,14 +150,18 @@ extern "C" {
 #define EC_MEMMAP_NC0               BIT(0) /* NC0 */
 #define EC_MEMMAP_NC1               BIT(1) /* NC1 */
 #define EC_MEMMAP_NMI_TRIGGER       BIT(2) /* NMI_TRIGGER: 1 => Trigger NMI# */
-#define EC_MEMMAP_SYS_MISC2                 0x1B /* SYS_MISC2 */ 
+
+#define EC_MEMMAP_SYS_MISC2                 0x1B /* SYS_MISC2 */
 #define EC_MEMMAP_AC_ADAPTER_FLAG   BIT(0) /* AC adapter Status (0:Off-line;1:On-line) */ 
+#define EC_MEMMAP_MFG_MODE_FLAG     BIT(1) /* MFG mode status (1:enable; 0:diable)*/
+
 #define EC_MEMMAP_SYS_MISC3                 0x1C /* status/flag. */ 
 #define EC_MEMMAP_SHOP_MODE         BIT(1) /* Shop mode of thermal table */
 #define EC_MEMMAP_NC2               BIT(3) /* NC1 */
 #define EC_MEMMAP_WATCHDOG_EN       BIT(4) /* EC watchdog, 1=enable, 0=disable. (for S0). */
 #define EC_MEMMAP_WATCHDOG_TO       BIT(5) /* EC watchdog timeout behavior, 1=shutdown, 0=trigger NMI.*/
 #define EC_MEMMAP_WATCHDOG_BIOS_EN  BIT(7) /* 1:BIOS watchdog for S0 to S3/S4/S5 enabled (EC will clear after received)  */
+
 #define EC_MEMMAP_SYS_MISC4                 0x1D /* status/flag. */ 
 #define EC_MEMMAP_CHECK_CTDP        BIT(0) /* Check cTDP change request */
 #define EC_MEMMAP_WRITE_PL1         BIT(1) /* Write PL1 request. */

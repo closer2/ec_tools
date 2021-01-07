@@ -2608,6 +2608,37 @@ int cmd_mfg_data_write(int argc, char *argv[])
 	return 0;	
 }
 
+int cmd_mfg_mode(int argc, char *argv[])
+{
+	int rv;
+
+	if (argc > 2) {
+		fprintf(stderr,"Usage: %s <on | off>\n", argv[0]);
+		return -1;
+	}
+	
+	if(1 == argc)
+	{
+		rv = read_mapped_mem8(EC_MEMMAP_SYS_MISC2);
+		if(rv & EC_MEMMAP_MFG_MODE_FLAG)
+			printf("MFG mode on\n");
+		else
+			printf("MFG mode off\n");
+		
+		return 0;
+	}
+
+	if(!strcmp(argv[1], "on"))
+	{
+
+	}
+	else if(!strcmp(argv[1], "off"))
+	{
+
+	}
+
+	return 0;
+}
 
 int cmd_reboot_ec(int argc, char *argv[])
 {
@@ -4017,6 +4048,7 @@ const struct command Tool_Cmd_Array[] = {
 	{"loganalyse", cmd_analysis_log},
 	{"mfgdataread", cmd_mfg_data_read},
 	{"mfgdatawrite", cmd_mfg_data_write},
+	{"mfgmode", cmd_mfg_mode},
 	//{"lightbar", cmd_lightbar},
 	//{"kbfactorytest", cmd_keyboard_factory_test},
 	//{"kbid", cmd_kbid},
@@ -4141,6 +4173,8 @@ const char help_str[] =
     "      read mfg data \n"
     "  mfgdatawrite\n"
     "      write mfg data \n"
+    "  mfgmode <on | off>\n"    
+	"	   read MFG status or turn on/off MFG mode\n"
 	"  pwrbtnstart\n"
 	"      detect power button rising and falling count start"
 	"  pwrbtnend\n"
