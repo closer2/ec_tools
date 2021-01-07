@@ -3021,6 +3021,59 @@ int cmd_flash_info(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_set_external_wdt(int argc, char *argv[])
+{
+	struct ec_external_WDT p;
+	int rv;
+	char *e;
+
+	if(argc > 3) {
+		fprintf(stderr, "Usage: %s <type> <flag> <time>\n", argv[0]);
+		fprintf(stderr, "type: wakeup | shutdown\n");
+		fprintf(stderr, "flag: enable | disable\n");
+		return -1;
+	}
+
+	if(!strcmp("wakeup", argv[1]))
+		p.type = 0x01;
+	else if(!strcmp("shutdown", argv[1]))
+		p.type = 0x02;
+	else 
+	{
+		fprintf(stderr, "Bad type name: %s\n", argv[1]);
+		fprintf(stderr, "Valid type names: wakeup | shutdown\n");
+		return -1;
+	}
+
+	if(!strcmp("enable", argv[2]))
+	{
+		p.flag1 = 0x01;
+		p.time = strtol(argv[3], &e, 0);
+		if (e && *e) {
+			fprintf(stderr, "Bad WDT time.\n");
+			return -1;
+		}
+	}
+	else if(!strcmp("disable", argv[2]))
+	{
+		p.flag1 = 0x02;
+		p.time = 0;
+	}
+	else 
+	{
+		fprintf(stderr, "Bad flag name: %s\n", argv[2]);
+		fprintf(stderr, "Valid flag names: enable | disable\n");
+		return -1;
+	}
+
+	rv = ec_command(EC_CMD_EXTERNAL_WDT, 0, &p, sizeof(p), NULL, 0);
+	if (rv < 0)
+		return rv;
+
+	printf("Set external WDT success!\n");
+	return 0;
+}
+
 int cmd_write_log(int argc, char *argv[])
 {
 	struct ec_params_flash_log p;
@@ -4122,6 +4175,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"usbpdmuxinfo", cmd_usb_pd_mux_info},
 	//{"usbpdpower", cmd_usb_pd_power},
 	{"version", cmd_version},
+	{"wdtset", cmd_set_external_wdt},
 	{"writelog", cmd_write_log},
 	//{"waitevent", cmd_wait_event},
 	//{"wireless", cmd_wireless},
@@ -4213,6 +4267,8 @@ const char help_str[] =
 	"      Get status information for port\n"
 	"  version\n"
 	"      Prints EC version\n"
+	"  wdtset <type> <flag> <time>\n"
+	"      set external WDT\n"
 	"  writelog\n"
 	"  	   write log to eflash\n"
 	"  reboot_ap_on_g3\n"
