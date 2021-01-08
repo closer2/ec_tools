@@ -2662,6 +2662,7 @@ int cmd_mfg_data_write(int argc, char *argv[])
 
 int cmd_mfg_mode(int argc, char *argv[])
 {
+	struct ec_params_mfg_data p;
 	int rv;
 
 	if (argc > 2) {
@@ -2671,8 +2672,8 @@ int cmd_mfg_mode(int argc, char *argv[])
 	
 	if(1 == argc)
 	{
-		rv = read_mapped_mem8(EC_MEMMAP_SYS_MISC2);
-		if(rv & EC_MEMMAP_MFG_MODE_FLAG)
+		rv = read_mapped_mem8(EC_MEMMAP_MFG_MODE);
+		if(0xBE == rv)
 			printf("MFG mode on\n");
 		else
 			printf("MFG mode off\n");
@@ -2680,14 +2681,19 @@ int cmd_mfg_mode(int argc, char *argv[])
 		return 0;
 	}
 
+	p.index = MFG_MODE_OFFSET;
 	if(!strcmp(argv[1], "on"))
 	{
-
+		p.data = 0xff;
 	}
 	else if(!strcmp(argv[1], "off"))
 	{
-
+		p.data = 0;
 	}
+	
+	rv = ec_command(EC_CMD_FLASH_SET_MFG_DATA, 0, &p, sizeof(p), NULL, 0);
+	if (rv < 0)
+		return rv;
 
 	return 0;
 }
