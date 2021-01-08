@@ -1839,7 +1839,9 @@ int cmd_switches(int argc, char *argv[])
 	if(argc != 3)
 	{
 		fprintf(stderr,
-			"Usage: %s <type> <switch>\n", argv[0]);
+			"Usage: %s <type> <on | off>\n", argv[0]);
+		fprintf(stderr,
+			"type: powerled | wakeonlan | wakeonwlan\n");
 	}
 
 	if(!strcmp("powerled", argv[1]))
@@ -4280,9 +4282,9 @@ const char help_str[] =
 	"      Prints the board version\n"
 	"  chipinfo\n"
 	"      Prints chip info\n"
-    "  ecupdate\n"
+    "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
-	"  ecbackup\n"
+	"  ecbackup <filename>\n"
 	"      ecbackup backup.bin\n"
 	"  fanduty <percent>\n"
 	"      Forces the fan PWM to a constant duty cycle\n"
@@ -4304,9 +4306,9 @@ const char help_str[] =
     "      read flash log\n"
     "  loganalyse\n"
     "      analyse flash log shutdown/wakeup \n"
-    "  mfgdataread\n"
+    "  mfgdataread <index>\n"
     "      read mfg data \n"
-    "  mfgdatawrite\n"
+    "  mfgdatawrite <index> <data>\n"
     "      write mfg data \n"
     "  mfgmode <on | off>\n"    
 	"	   read MFG status or turn on/off MFG mode\n"
@@ -4340,7 +4342,7 @@ const char help_str[] =
 	"      Set real-time clock alarm to go off in <sec> seconds\n"
 	"  sysinfo [flags|reset_flags|firmware_copy]\n"
 	"      Display system info.\n"
-	"  switches\n"
+	"  switches <type> <on | off>\n"
 	"      Prints current EC switch positions\n"
 	"  temps <sensorid>\n"
 	"      Print temperature.\n"
@@ -4354,7 +4356,7 @@ const char help_str[] =
 	"      Prints EC version\n"
 	"  wdtset <type> <flag> <time>\n"
 	"      set external WDT\n"
-	"  writelog\n"
+	"  writelog <log_id>\n"
 	"  	   write log to eflash\n"
 	"  reboot_ap_on_g3\n"
 	"      Requests that the EC will automatically reboot the AP the next time\n"
