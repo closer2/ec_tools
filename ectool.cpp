@@ -1441,6 +1441,56 @@ int cmd_pwm_get_fan_rpm(int argc, char *argv[])
 	return 0;
 }
 
+static int print_fan_status(int idx)
+{
+	int rv = read_mapped_mem8(EC_MEMMAP_SYS_FAN_STATUS + idx);
+
+	switch (rv) {
+	case 0:
+		printf("Fan %d status: stopped", idx);
+		break;
+	case 1:
+		printf("Fan %d status: changing!\n", idx);
+		break;
+	case 2:
+		printf("Fan %d status: locked!\n", idx);
+		break;
+	case 3:
+		printf("Fan %d status: frustrated!\n", idx);
+		break;
+	default:
+		printf("Fan %d status: unknow!\n", idx);
+		break;
+	}
+
+	return 0;
+}
+
+int cmd_pwm_get_fan_status(int argc, char *argv[])
+{
+	int i, num_fans;
+
+	num_fans = get_num_fans();
+	if (argc < 2 || !strcmp(argv[1], "all")) {
+		/* Print all the fan status */
+		for (i = 0; i < num_fans; i++)
+			print_fan_status(i);
+	} else {
+		char *e;
+		int idx;
+
+		idx = strtol(argv[1], &e, 0);
+		if ((e && *e) || idx < 0 || idx >= num_fans) {
+			fprintf(stderr, "Bad index.\n");
+			return -1;
+		}
+
+		print_fan_status(idx);
+	}
+
+	return 0;
+}
+
 int cmd_pwm_set_fan_rpm(int argc, char *argv[])
 {
 	struct ec_params_pwm_set_fan_target_rpm_v1 p_v1;
@@ -4161,6 +4211,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"pstoreread", cmd_pstore_read},
 	//{"pstorewrite", cmd_pstore_write},
 	{"pwmgetfanrpm", cmd_pwm_get_fan_rpm},
+	{"pwmgetfanstatus", cmd_pwm_get_fan_status},
 	//{"pwmgetkblight", cmd_pwm_get_keyboard_backlight},
 	{"pwmgetnumfans", cmd_pwm_get_num_fans},
 	//{"pwmgetduty", cmd_pwm_get_duty},
@@ -4269,6 +4320,8 @@ const char help_str[] =
 	"      Prints power-related information\n"
 	"  pwmgetfanrpm [<index> | all]\n"
 	"      Prints current fan RPM\n"
+	"  pwmgetfanstatus [<index> | all]\n"
+	"      Prints current fan status\n"
 	"  pwmgetnumfans\n"
 	"      Prints the number of fans present\n"
 	"  pwmsetfanrpm <targetrpm>\n"
