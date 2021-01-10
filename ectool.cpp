@@ -3002,9 +3002,12 @@ int cmd_backup_ec(int argc, char *argv[])
 	return 0;
 }
 
+#define MFG_DATA_ADDRESS    0x3E000
+
 int cmd_flash_ec(int argc, char *argv[])
 {
     char build_string[256];
+	struct ec_params_flash_read r_p;
 	struct ec_params_flash_write *p =
                         (struct ec_params_flash_write *)build_string;
 	int i;
@@ -3031,6 +3034,21 @@ int cmd_flash_ec(int argc, char *argv[])
 		return -1;
     }
 
+	/* backup mfg data*/
+	r_p.offset = MFG_DATA_ADDRESS;
+	r_p.size = 0xF0;
+	rv = ec_command(EC_CMD_FLASH_READ, 0, &r_p,
+                                sizeof(r_p), build_string, r_p.size);
+	if (rv < 0)
+    {
+        printf("backup mfg data error\n");
+		return rv;
+    }
+	for(i=0; i<0xF0; i++)
+	{
+		*(buf+MFG_DATA_ADDRESS+i) = build_string[i];
+	}
+	
     /* Erase flash */
     offset = 0;     // NPCX796FC flash start address
     p_erase.offset = 0;
