@@ -7220,54 +7220,6 @@ struct ec_external_WDT {
     uint16_t time; 
 } __ec_align4;
 
-/* Set different type Switch */
-#define EC_CMD_SWITCH_FUNTION 0x0611
-/**
- * struct ec_external_WDT - External WDT Function.
- * @type: 0x01: Power LED.
- *        0x02: WakeOnLan.
- *        0x03: WakeOnWLan.
- * @switch: 0x01: Turn on type function.
- *          0x02: turn off type function.
- * @Reserved: Reserved.
- */
-struct ec_switch_funtion {
-    uint8_t type;
-	uint8_t switchi;
-    uint16_t Reserved; 
-} __ec_align4;
-
-/* Notify EC to do corresponding functions*/
-#define EC_CMD_NOTIFY_EC 0x0612
-/**
- * struct ec_params_notify_EC - Notify EC to do corresponding functions.
- * @type: 0x01: Notify EC BIOS enter crisis recovery mode.
- *        0x02: Notify EC GraphicCard.
- *        0x03: Notify EC to trigger SW mirror in S5.
- * @Reserved: Reserved.
- * @data: EC received data form BIOS. 
- */
-struct ec_params_notify_EC {
-    uint8_t type;
-    uint8_t Reserved;
-	uint32_t data;
-} __ec_align4;
-
-/* Get different type information*/
-#define EC_CMD_GET_INFORMATION 0x0613
-/**
- * struct ec_params_information - Parameters for different type read command.
- * @type: 0x01: Get ChassisIntrusion data.
- * @Reserved: Reserved.
- * @data:BIOS read data form EC. 
- */
-struct ec_params_information {
-    uint8_t type;
-    uint8_t Reserved;
-	uint32_t data;
-} __ec_align4;
-
-
 /*****************************************************************************/
 /*
  * Reserve a range of host commands for board-specific, experimental, or

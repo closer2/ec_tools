@@ -1830,52 +1830,6 @@ int cmd_battery_cut_off(int argc, char *argv[])
 	return rv;
 }
 
-int cmd_switches(int argc, char *argv[])
-{
-	struct ec_switch_funtion p;
-	int i, rv;
-	char *e;
-
-	if(argc != 3)
-	{
-		fprintf(stderr,
-			"Usage: %s <type> <on | off>\n", argv[0]);
-		fprintf(stderr,
-			"type: powerled | wakeonlan | wakeonwlan\n");
-	}
-
-	if(!strcmp("powerled", argv[1]))
-		p.type = 0x01;
-	else if(!strcmp("wakeonlan", argv[1]))
-		p.type = 0x02;
-	else if(!strcmp("wakeonwlan", argv[1]))
-		p.type = 0x03;
-	else 
-	{
-		fprintf(stderr, "Bad type name: %s\n", argv[1]);
-		fprintf(stderr, "Valid type names: powerled | "
-						 "wakeonwlan | wakeonwlan\n");
-		return -1;
-	}
-	
-	if(!strcmp("on", argv[2]))
-		p.switchi = 0x01;
-	else if(!strcmp("off", argv[2]))
-		p.switchi = 0x02;
-	else
-	{
-		fprintf(stderr, "Bad switchi name: %s\n", argv[1]);
-		fprintf(stderr, "Valid switchi names: on | off\n");
-		return -1;
-	}
-
-	rv = ec_command(EC_CMD_SWITCH_FUNTION, 0, &p, sizeof(p), NULL, 0);
-	if (rv < 0)
-			return rv;
-
-	return 0;
-}
-
 int cmd_chipinfo(int argc, char *argv[])
 {
 	struct ec_response_get_chip_info info;
@@ -4288,7 +4242,6 @@ const struct command Tool_Cmd_Array[] = {
 	//{"stress", cmd_stress_test},
 	{"sysinfo", cmd_sysinfo},
 	//{"port80flood", cmd_port_80_flood},
-	{"switches", cmd_switches},
 	{"temps", cmd_temperature},
 	{"tempsinfo", cmd_temp_sensor_info},
 	//{"test", cmd_test},
@@ -4394,8 +4347,6 @@ const char help_str[] =
 	"      Set real-time clock alarm to go off in <sec> seconds\n"
 	"  sysinfo [flags|reset_flags|firmware_copy]\n"
 	"      Display system info.\n"
-	"  switches <type> <on | off>\n"
-	"      Prints current EC switch positions\n"
 	"  temps <sensorid>\n"
 	"      Print temperature.\n"
 	"  tempsinfo <sensorid>\n"
