@@ -3082,41 +3082,35 @@ int cmd_flash_info(int argc, char *argv[])
 
 int cmd_set_external_wdt(int argc, char *argv[])
 {
-	struct ec_external_WDT p;
-	int rv;
 	char *e;
+	uint16_t time;
+	uint8_t low, high;
 
-	if(argc > 3) {
+	if(argc < 3 || argc > 4) {
 		fprintf(stderr, "Usage: %s <type> <flag> <time>\n", argv[0]);
 		fprintf(stderr, "type: wakeup | shutdown\n");
 		fprintf(stderr, "flag: enable | disable\n");
 		return -1;
 	}
 
-	if(!strcmp("wakeup", argv[1]))
-		p.type = 0x01;
-	else if(!strcmp("shutdown", argv[1]))
-		p.type = 0x02;
-	else 
-	{
-		fprintf(stderr, "Bad type name: %s\n", argv[1]);
-		fprintf(stderr, "Valid type names: wakeup | shutdown\n");
-		return -1;
-	}
-
 	if(!strcmp("enable", argv[2]))
 	{
-		p.flag1 = 0x01;
-		p.time = strtol(argv[3], &e, 0);
+		outb(0x01, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* enable */
+		time = strtol(argv[3], &e, 0);
 		if (e && *e) {
 			fprintf(stderr, "Bad WDT time.\n");
 			return -1;
 		}
+		low = time;
+		high = time >> 8;
+		outb(low, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1);	/* low byte time */
+		outb(high, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2);	/* high byte time */
 	}
 	else if(!strcmp("disable", argv[2]))
 	{
-		p.flag1 = 0x02;
-		p.time = 0;
+		outb(0x02, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* disable */
+		outb(0, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1);	/* low byte time = 0 */
+		outb(0, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2);	/* low byte time = 0 */
 	}
 	else 
 	{
@@ -3125,11 +3119,23 @@ int cmd_set_external_wdt(int argc, char *argv[])
 		return -1;
 	}
 
-	rv = ec_command(EC_CMD_EXTERNAL_WDT, 0, &p, sizeof(p), NULL, 0);
-	if (rv < 0)
-		return rv;
+	if(!strcmp("wakeup", argv[1]))
+		outb(0x04, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* wakeup wdt control */
+	else if(!strcmp("shutdown", argv[1]))
+		outb(0x05, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* shutdown wdt control */
+	else 
+	{
+		fprintf(stderr, "Bad type name: %s\n", argv[1]);
+		fprintf(stderr, "Valid type names: wakeup | shutdown\n");
+		return -1;
+	}
 
-	printf("Set external WDT success!\n");
+	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
+	{
+		printf("Set external WDT failed!\n");
+		return -1;
+	}
+
 	return 0;
 }
 
