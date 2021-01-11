@@ -3402,6 +3402,31 @@ int cmd_power_info(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_power_led(int argc, char *argv[])
+{
+	if (argc != 2) {
+		fprintf(stderr,
+			"Usage: %s <name> <on | off>\n", argv[0]);
+		return -1;
+	}
+	
+	if(!strcmp("on", argv[1]))
+	{
+		outb(0x01, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* on */
+		outb(0x06, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* power LED control */
+	}
+	else if(!strcmp("off", argv[1]))
+	{
+		outb(0x02, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* off */
+		outb(0x06, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* power LED control */
+	}
+
+	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
+		return -1;
+
+	return 0;
+}
+
 int read_mapped_temperature(int id)
 {
 	int rv;
@@ -4231,6 +4256,7 @@ const struct command Tool_Cmd_Array[] = {
 	{"pwrbtnstart", cmd_pwrbtn_test_start},
 	{"pwrbtnend", cmd_pwrbtn_test_end},
 	{"powerinfo", cmd_power_info},
+	{"powerled", cmd_power_led},
 	//{"protoinfo", cmd_proto_info},
 	//{"pse", cmd_pse},
 	//{"pstoreinfo", cmd_pstore_info},
@@ -4344,6 +4370,8 @@ const char help_str[] =
 	"      detect power button rising and falling count end"
 	"  powerinfo\n"
 	"      Prints power-related information\n"
+	"  powerled <on | off>\n"
+	"      on/off power led\n"
 	"  pwmgetfanrpm [<index> | all]\n"
 	"      Prints current fan RPM\n"
 	"  pwmgetfanstatus [<index> | all]\n"

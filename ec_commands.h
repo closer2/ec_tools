@@ -243,6 +243,11 @@ extern "C" {
 #define EC_MEMMAP_HOST_EVENTS              0x76 /* 64 bits */
 /* Unused 0x77 - 0xdf */
 
+/* E0--FF, write protect disable*/
+#define EC_MEMMAP_BIOS_CMD                  0xE0
+#define EC_MEMMAP_BIOS_CMD_STATUS           0xE1
+#define EC_MEMMAP_BIOS_DATA                 0xE2
+
 /*
  * ACPI is unable to access memory mapped data at or above this offset due to
  * limitations of the ACPI protocol. Do not place data in the range 0xe0 - 0xfe
