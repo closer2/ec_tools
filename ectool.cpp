@@ -4119,19 +4119,40 @@ int cmd_typec_status(int argc, char *argv[])
 	#endif
 }
 
-int cmd_reboot_ap_on_g3(int argc, char *argv[])
+int cmd_cold_boot(int argc, char *argv[])
 {
 	struct ec_params_reboot_ap_on_g3_v1 p;
 	int rv;
 	char *e;
 	int cmdver;
 
-	if (argc < 2) {
-		p.reboot_ap_at_g3_delay = 0;
-	} else {
-		p.reboot_ap_at_g3_delay = strtol(argv[1], &e, 0);
+	if (1 == argc) {
+		p.reboot_ap_at_g3_cyclecount = 1; /* default is 1 */
+		p.reboot_ap_at_g3_delay = 30; /* default is 30sec */
+	} else if (2 == argc) {
+		fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is cold boot cycle count\n"
+			"  <time> is cold boot time\n", argv[0]);
+			return -1;
+	} else if (3 == argc){
+		p.reboot_ap_at_g3_cyclecount = strtol(argv[1], &e, 0);
+
 		if (e && *e) {
-			fprintf(stderr, "invalid number\n");
+			fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is cold boot cycle count\n"
+			"  <time> is cold boot time\n", argv[0]);
+			return -1;
+		}
+
+		p.reboot_ap_at_g3_delay = strtol(argv[2], &e, 0);
+		
+		if (e && *e) {
+			fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is cold boot cycle count\n"
+			"  <time> is cold boot time\n", argv[0]);
 			return -1;
 		}
 	}
@@ -4140,6 +4161,8 @@ int cmd_reboot_ap_on_g3(int argc, char *argv[])
 	else
 		cmdver = 0;
 
+	printf("cold boot time cycle count to %d\n", p.reboot_ap_at_g3_cyclecount);
+	printf("cold boot time set to %dsec\n", p.reboot_ap_at_g3_delay);
 	rv = ec_command(EC_CMD_REBOOT_AP_ON_G3, cmdver, &p, sizeof(p), NULL, 0);
 	return (rv < 0 ? rv : 0);
 }
@@ -4323,7 +4346,7 @@ const struct command Tool_Cmd_Array[] = {
 	{"writelog", cmd_write_log},
 	//{"waitevent", cmd_wait_event},
 	//{"wireless", cmd_wireless},
-	{"reboot_ap_on_g3", cmd_reboot_ap_on_g3},
+	{"coldboot", cmd_cold_boot},
 	{"Last_Cmd", void_function}
 };
 
@@ -4419,9 +4442,9 @@ const char help_str[] =
 	"      set external WDT\n"
 	"  writelog <log_id>\n"
 	"  	   write log to eflash\n"
-	"  reboot_ap_on_g3\n"
-	"      Requests that the EC will automatically reboot the AP the next time\n"
-	"      we enter the G3 power state.\n"
+	"  coldboot <cycle> <time>\n"
+	"      Requests that the EC will automatically start the AP the next time\n"
+	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
 	"";
 
 
