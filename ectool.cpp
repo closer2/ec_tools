@@ -3785,6 +3785,20 @@ int cmd_usb_pd(int argc, char *argv[])
 		return (rv < 0) ? rv : 0;
 
 	if (cmdver == 0) {
+		printf("Port C%d: %s\nPolarity:CC%d\n",
+		       p.port, (r->enabled) ? "enable" : "disable",
+		       r->polarity + 1);
+	} else {
+		printf("Port C%d: %s\nPolarity:CC%d\n",
+		       p.port,
+		       (r_v1->enabled & PD_CTRL_RESP_ENABLED_CONNECTED) ?
+				"connected" : "disconnected",
+		       r_v1->polarity + 1);
+	}
+	
+
+	#if 0
+	if (cmdver == 0) {
 		printf("Port C%d is %sabled, Role:%s Polarity:CC%d State:%d\n",
 		       p.port, (r->enabled) ? "en" : "dis",
 		       r->role == PD_ROLE_SOURCE ? "SRC" : "SNK",
@@ -3890,12 +3904,49 @@ int cmd_usb_pd(int argc, char *argv[])
 				(r_v1->role & PD_CTRL_RESP_ROLE_UNCONSTRAINED) ?
 					" Unconstrained power\n" : "");
 	}
+	#endif
 	return 0;
 }
 
 
 int cmd_typec_status(int argc, char *argv[])
 {
+	struct ec_params_typec_status p;
+	struct ec_response_typec_status *r =
+				(struct ec_response_typec_status *)ec_inbuf;
+	char *endptr;
+	int rv;
+
+	if (argc != 2) {
+		fprintf(stderr,
+			"Usage: %s <port>\n"
+			"  <port> is the type-c port to query\n", argv[0]);
+		return -1;
+	}
+
+	p.port = strtol(argv[1], &endptr, 0);
+	if (endptr && *endptr) {
+		fprintf(stderr, "Bad port\n");
+		return -1;
+	}
+
+	rv = ec_command(EC_CMD_TYPEC_STATUS, 0, &p, sizeof(p),
+			ec_inbuf, ec_max_insize);
+	if (rv == -EC_RES_INVALID_COMMAND - EECRESULT)
+		/* Fall back to PD_CONTROL to support older ECs */
+		return cmd_usb_pd(argc, argv);
+	else if (rv < 0)
+		return -1;
+
+	printf("Port C%d: %s\nPolarity:CC%d\n",
+		p.port,
+		r->dev_connected ? "connected" : "disconnected",
+		(r->polarity % 2 + 1));
+
+	return 0;
+
+
+	#if 0
 	struct ec_params_typec_status p;
 	struct ec_response_typec_status *r =
 				(struct ec_response_typec_status *)ec_inbuf;
@@ -4065,6 +4116,7 @@ int cmd_typec_status(int argc, char *argv[])
 	}
 
 	return 0;
+	#endif
 }
 
 int cmd_reboot_ap_on_g3(int argc, char *argv[])
