@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V0.2"
+#define TOOLS_VER   "V0.3"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -1443,11 +1443,11 @@ int cmd_pwm_get_fan_rpm(int argc, char *argv[])
 
 static int print_fan_status(int idx)
 {
-	int rv = read_mapped_mem8(EC_MEMMAP_SYS_FAN_STATUS + idx);
+	int rv = read_mapped_mem8(EC_MEMMAP_CPU_FAN_STATUS + idx);
 
 	switch (rv) {
 	case 0:
-		printf("Fan %d status: stopped", idx);
+		printf("Fan %d status: stopped\n", idx);
 		break;
 	case 1:
 		printf("Fan %d status: changing!\n", idx);
@@ -2627,10 +2627,10 @@ int cmd_mfg_mode(int argc, char *argv[])
 	if(1 == argc)
 	{
 		rv = read_mapped_mem8(EC_MEMMAP_MFG_MODE);
-		if(0xBE == rv)
-			printf("MFG mode on\n");
+		if(0xFF == rv)
+			printf("MFG MODE\n");
 		else
-			printf("MFG mode off\n");
+			printf("NO MODE\n");
 		
 		return 0;
 	}
@@ -2638,7 +2638,7 @@ int cmd_mfg_mode(int argc, char *argv[])
 	p.index = MFG_MODE_OFFSET;
 	if(!strcmp(argv[1], "on"))
 	{
-		p.data = 0xff;
+		p.data = 0xFF;
 	}
 	else if(!strcmp(argv[1], "off"))
 	{

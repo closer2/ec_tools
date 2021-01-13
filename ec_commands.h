@@ -120,19 +120,23 @@ extern "C" {
 #define EC_MEMMAP_VERSION_X                 0x00 /* EC_VERSION_X */
 #define EC_MEMMAP_VERSION_YZ                0x01 /* EC_VERSION_YZ */
 #define EC_MEMMAP_VERSION_TEST              0x02 /* EC_VERSION_TEST */
-/* Unused 0x03 */
+#define EC_MEMMAP_RESET_FLAG                0x03 /* if write 0xAA, EC reset after shutdown*/
 #define EC_MEMMAP_Year                      0x04 /* EC_Year */
 #define EC_MEMMAP_Month                     0x05 /* EC_Month */
 #define EC_MEMMAP_Day                       0x06 /* EC_Day */
 /* Unused 0x07 - 0x0B */
-#define EC_MEMMAP_POST_WATCHDOG_COUNTER     0x0C /* BIOS POST watchd1og counter */
-#define EC_MEMMAP_POST_WATCHDOG_TIMES       0x0D /* BIOS POST watchdog re-try times */ 
+#define EC_MEMMAP_GPIO_BOARD_ID             0x0C /* BOARD_ID */
+#define EC_MEMMAP_GPIO_PROJECT_ID           0x0D /* PROJECT_ID */ 
 /* Unused 0x0E - 0x0F */
 #define EC_MEMMAP_DEVICE_CONTROL_REG        0x10 /* Device Control register */ 
 #define EC_MEMMAP_LID_STATUS        BIT(0) /* 1:LID closed;0:LID open */
 /* Unused 0x11 */
-#define EC_MEMMAP_POWER_FLAG1               0x12 /* EC power flag 1 */ 
+#define EC_MEMMAP_POWER_FLAG1               0x12 /* EC power flag 1 */
+#define EC_MEMMAP_DISABLE_G3        BIT(0) /* 1:disable G3, 0:enable G3 */
+#define EC_MEMMAP_CRISIS_RECOVERY   BIT(1) /* 1:BIOS crisis recovery, 0:normal */
+#define EC_MEMMAP_CRISIS_CLEAR      BIT(2) /* 1:Chassis Intrusion Status Clear */
 #define EC_MEMMAP_POWER_LOCK        BIT(7) /* 1:Lock power button */
+
 /* Unused 0x13 -0x14 */
 #define EC_MEMMAP_KEYBOARD_CONTROL          0x15 /* Keyboard control flag */ 
 #define EC_MEMMAP_FNKEY_INVERSE     BIT(0) /* FN key inverse status: 1 => inverse, 0 => not inverse. */
@@ -143,9 +147,10 @@ extern "C" {
 #define EC_MEMMAP_DEVICE_STATUS             0x16 /* Device status */ 
 #define EC_MEMMAP_MIC_MODE          BIT(4) /* 1:Microphone mute, 0:Mic un-mute. */
 
-#define EC_MEMMAP_LEDERROR_CONTROL          0x17 /* EC Error LED control */ 
-#define EC_MEMMAP_MFG_MODE                  0x18 /* Get MFG_MODE Status(!0xBE:NO MODE;0xBE:MFG MODE) */
-/* Unused 0x19 */
+#define EC_MEMMAP_AC_RECOVERY               0x17 /* AC recovery state(1:on, 2:0ff, 3:pre)*/ 
+#define EC_MEMMAP_MFG_MODE                  0x18 /* Get MFG_MODE Status(!0xFF:NO MODE; 0xFF:MFG MODE) */
+#define EC_MEMMAP_WDT_TIMEOUT_COUNT         0x19 /* wakeup wdt timeout count */
+
 #define EC_MEMMAP_SYS_MISC1                 0x1A /* SYS_MISC1 */ 
 #define EC_MEMMAP_NC0               BIT(0) /* NC0 */
 #define EC_MEMMAP_NC1               BIT(1) /* NC1 */
@@ -174,17 +179,17 @@ extern "C" {
 /* Unused 0x1E -0x1F */
 
 /* Sensor temperature, offset 0x20--0x2F */
-#define EC_MEMMAP_TEMP_SENSOR_00            0x20 /* CPU internal */
-#define EC_MEMMAP_TEMP_SENSOR_01            0x21 /* CPU external */
-#define EC_MEMMAP_TEMP_SENSOR_02            0x22 /* GPU internal */
-#define EC_MEMMAP_TEMP_SENSOR_03            0x23 /* GPU external */
-#define EC_MEMMAP_TEMP_SENSOR_04            0x24 /* Environment */
-#define EC_MEMMAP_TEMP_SENSOR_05            0x25 /* SSD */
-#define EC_MEMMAP_TEMP_SENSOR_06            0x26 /* Memory */
-#define EC_MEMMAP_TEMP_SENSOR_07            0x27 /* Battery */
-#define EC_MEMMAP_TEMP_SENSOR_08            0x28 /* Charger */
-#define EC_MEMMAP_TEMP_SENSOR_09            0x29 /* Type-C port-0 */
-#define EC_MEMMAP_TEMP_SENSOR_0A            0x2A /* Type-C port-1 */
+#define EC_MEMMAP_TEMP_SENSOR_00            0x20 /* CPU DTS */
+#define EC_MEMMAP_TEMP_SENSOR_01            0x21 /* Ambience NTC */
+#define EC_MEMMAP_TEMP_SENSOR_02            0x22 /* SSD1 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_03            0x23 /* PCIEX16 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_04            0x24 /* CPU VRAM NTC */
+#define EC_MEMMAP_TEMP_SENSOR_05            0x25 /* Memory NTC */
+#define EC_MEMMAP_TEMP_SENSOR_06            0x26 /* Battery */
+#define EC_MEMMAP_TEMP_SENSOR_07            0x27 /* Charger */
+#define EC_MEMMAP_TEMP_SENSOR_08            0x28 /* Type-C port-0 */
+#define EC_MEMMAP_TEMP_SENSOR_09            0x29 /* Type-C port-1 */
+#define EC_MEMMAP_TEMP_SENSOR_0A            0x2A 
 #define EC_MEMMAP_TEMP_SENSOR_0B            0x2B
 #define EC_MEMMAP_TEMP_SENSOR_0C            0x2C
 #define EC_MEMMAP_TEMP_SENSOR_0D            0x2D
@@ -192,8 +197,8 @@ extern "C" {
 #define EC_MEMMAP_TEMP_SENSOR_0F            0x2F
 #define EC_MEMMAP_TEMP_SENSOR               EC_MEMMAP_TEMP_SENSOR_00
 /* Unused 0x30 -0x52 */
-#define EC_MEMMAP_SYS_FAN_STATUS            0x53 /* SYS fan_status */ 
-#define EC_MEMMAP_CPU_FAN_STATUS            0x54 /* CPU fan_status */ 
+#define EC_MEMMAP_CPU_FAN_STATUS            0x53 /* CPU fan_status */ 
+#define EC_MEMMAP_SYS_FAN_STATUS            0x54 /* SYS fan_status */ 
 /* Unused 0x55 */
 /* SYS Fan RPM (High byte 0x56,Low byte 0x57),
  * CPU Fan RPM (High byte 0x58,Low byte 0x59). */
@@ -3538,46 +3543,54 @@ struct ec_response_tmp006_get_raw {
 	int32_t v;  /* In nV */
 } __ec_align4;
 
+
 /*****************************************************************************/
+/* BIOS write flash log */
 
-/*these all use ec_params_rtc*/
-#define EC_CMD_FLASH_LOG_SET_VALUE 0x0057
-
+/* flash log params and response structures */
 struct ec_params_flash_log {
-	uint32_t log_id;
-	uint32_t log_timestamp;
+    uint32_t log_id;
+    uint32_t log_timestamp;
 } __ec_align4;
 
 struct ec_response_flash_log {
-	uint32_t log_id;
-	uint32_t log_timestamp;
+    uint32_t log_id;
+    uint32_t log_timestamp;
 } __ec_align4;
+
+
+/* These use ec_response_rtc */
+#define EC_CMD_FLASH_LOG_GET_VALUE 0x0056
+
+/* These all use ec_params_flash_log */
+#define EC_CMD_FLASH_LOG_SET_VALUE 0x0057
 
 enum mfg_data_offset {
     MFG_MODE_OFFSET = 0x00,
     MFG_AC_RECOVERY_OFFSET = 0x01,
     MFG_WDT_TIMEOUT_COUNT_OFFSET = 0x02,
+    MFG_CHASSIS_INTRUSION_DATA_OFFSET = 0x03,
+    MFG_CHASSIS_INTRUSION_MODE_OFFSET = 0x04,
 
     MFG_OFFSET_COUNT
 };
 
-struct ec_params_mfg_data{
-	uint8_t index;
-	uint8_t data;
+struct ec_params_mfg_data {
+    uint8_t index;
+    uint8_t data;
 } __ec_align1;
 
-struct ec_response_mfg_data{
-	uint8_t index;
-	uint8_t data;
+struct ec_response_mfg_data {
+    uint8_t index;
+    uint8_t data;
 } __ec_align1;
 
 /* These all use ec_params_mfg_data */
-#define EC_CMD_FLASH_GET_MFG_DATA 0x0058
-#define EC_CMD_FLASH_SET_MFG_DATA 0x0059
+#define EC_CMD_FLASH_GET_MFG_DATA   0x0058
+#define EC_CMD_FLASH_SET_MFG_DATA   0x0059
 
 
 /*****************************************************************************/
-
 /* MKBP - Matrix KeyBoard Protocol */
 
 /*
