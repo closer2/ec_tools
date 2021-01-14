@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V0.4"
+#define TOOLS_VER   "V0.5"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -720,6 +720,19 @@ void analysis_data(char *date)
 		date[j++] = str[i];
 	}
 	date[j] = '\0';
+}
+
+void get_current_time(char *date)
+{
+	struct tm *now;
+	time_t secs;
+	time(&secs);
+	now = localtime(&secs);
+
+	strcpy(date, asctime(now));
+	
+	// delete '\n'
+	date[strlen(date) - 1] = '\0';
 }
 
 
@@ -2444,6 +2457,8 @@ int cmd_read_8k_log(int argc, char *argv[])
 	int rv;
 	char *e;
 	uint8_t *buf;
+	char date[64];
+	char *filename;
 
 	offset = 0x3c000;
 	size = 0x2000;
@@ -2463,7 +2478,10 @@ int cmd_read_8k_log(int argc, char *argv[])
 		return rv;
 	}
 
-	rv = write_file("8k_shutdown_wakeup_cause.bin", buf, size);
+	get_current_time(date);
+	analysis_data(date);
+	filename = strcat(date, ".bin");
+	rv = write_file(filename, buf, size);
 	free(buf);
 	if (rv)
 		return rv;
