@@ -772,6 +772,10 @@ log_info_struct shutdown_case_list[]=
 	{0x36,	"DCJ too hot(Thermistor: DC Jack)"},
 	{0x37,	"Ambient too hot(Thermistor: Ambient)"},
 	{0x38,	"SSD too hot(Thermistor:SSD)"},
+
+	{0x40,	"Power button pressed"},
+	{0x41,	"Power button released"},
+	{0x42,	"EC reset after BIOS tool update ec"},
 	
 	{0xD0,	"BIOS/OS WDT"},
 	{0xD1,	"BIOS bootbloack fail"},
@@ -796,7 +800,13 @@ log_info_struct wakeup_case_list[]=
 	{0x04,	"SLP_S3 high trig S3 to S0"},
 	{0x05,	"SLP_S4 high trig S4 to S0"},
 	{0x06,	"SLP_S5 high trig S5 to S0 (SLP_S4/S5 use 0x04)"},
-	
+
+	{0x40,  "EC reset cause is reset-pin"},
+	{0x41,  "EC reset cause is power-on"},
+	{0x42,  "EC reset cause is watchdog"},
+	{0x43,  "EC reset cause is soft"},
+	{0x44,  "EC reset cause is hard"},
+
 	{0xD1,	"Wakeup from BIOS notify EC after BIOS update"},
 	{0xD2,	"BIOS autowake from S3"},
 	{0xD3,	"BIOS autowake from S4"},
