@@ -2462,6 +2462,38 @@ int cmd_read_8k_log(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_write_log(int argc, char *argv[])
+{
+	struct ec_params_flash_log p;
+	struct ec_response_flash_log r;
+	int i, rv;
+	char *e;
+	char date[32];
+
+	if(argc < 2) {
+		fprintf(stderr, "Usage: %s <log_id>\n", argv[0]);
+		return -1;
+	}
+
+	for(i = 1; i < argc; i++)
+	{
+		p.log_id = strtol(argv[i], &e, 0);
+		if (e && *e) {
+			fprintf(stderr, "Bad log_id arg.\n");
+			return -1;
+		}
+		
+		rv = ec_command(EC_CMD_FLASH_LOG_SET_VALUE, 0, &p, sizeof(p), &r, sizeof(r));
+		if (rv < 0)
+			return rv;
+		
+		sec_to_date(r.log_timestamp, date);
+		printf("[ %s ] : ", date);
+		printf("%02x\n", r.log_id);
+	}
+	printf("Write flash log succeeded!\n");
+	return 0;
+}
 
 
 int cmd_analysis_log(int argc, char *argv[])
@@ -3136,39 +3168,6 @@ int cmd_set_external_wdt(int argc, char *argv[])
 		return -1;
 	}
 
-	return 0;
-}
-
-int cmd_write_log(int argc, char *argv[])
-{
-	struct ec_params_flash_log p;
-	struct ec_response_flash_log r;
-	int i, rv;
-	char *e;
-	char date[32];
-
-	if(argc < 2) {
-		fprintf(stderr, "Usage: %s <log_id>\n", argv[0]);
-		return -1;
-	}
-
-	for(i = 1; i < argc; i++)
-	{
-		p.log_id = strtol(argv[i], &e, 0);
-		if (e && *e) {
-			fprintf(stderr, "Bad log_id arg.\n");
-			return -1;
-		}
-		
-		rv = ec_command(EC_CMD_FLASH_LOG_SET_VALUE, 0, &p, sizeof(p), &r, sizeof(r));
-		if (rv < 0)
-			return rv;
-		
-		sec_to_date(r.log_timestamp, date);
-		printf("[ %s ] : ", date);
-		printf("%02x\n", r.log_id);
-	}
-	printf("Write succeeded!\n");
 	return 0;
 }
 
@@ -4155,6 +4154,8 @@ int cmd_cold_boot(int argc, char *argv[])
 			"  <time> is cold boot time\n", argv[0]);
 			return -1;
 		}
+	} else {
+		return -1;
 	}
 	if (ec_cmd_version_supported(EC_CMD_REBOOT_AP_ON_G3, 1))
 		cmdver = 1;
@@ -4226,7 +4227,6 @@ const struct command Tool_Cmd_Array[] = {
 	//{"eventsetwakemask", cmd_host_event_set_wake_mask},
     {"ecupdate", cmd_flash_ec},
     {"ecbackup", cmd_backup_ec},
-    
 	//{"extpwrlimit", cmd_ext_power_limit},
 	{"fanduty", cmd_fanduty},
 	//{"flasherase", cmd_flash_erase},
@@ -4263,6 +4263,7 @@ const struct command Tool_Cmd_Array[] = {
 	{"led", cmd_led},
 	{"loginfo", cmd_log_info},
 	{"logread", cmd_read_8k_log},
+	{"logwrite", cmd_write_log},
 	{"loganalyse", cmd_analysis_log},
 	{"mfgdataread", cmd_mfg_data_read},
 	{"mfgdatawrite", cmd_mfg_data_write},
@@ -4307,7 +4308,6 @@ const struct command Tool_Cmd_Array[] = {
 	//{"pwmsetduty", cmd_pwm_set_duty},
 	//{"rand", cmd_rand},
 	//{"readtest", cmd_read_test},
-
 	{"rebootec", cmd_reboot_ec},
 	//{"rollbackinfo", cmd_rollback_info},
 	{"rtcget", cmd_rtc_get},
@@ -4343,7 +4343,6 @@ const struct command Tool_Cmd_Array[] = {
 	//{"usbpdpower", cmd_usb_pd_power},
 	{"version", cmd_version},
 	{"wdtset", cmd_set_external_wdt},
-	{"writelog", cmd_write_log},
 	//{"waitevent", cmd_wait_event},
 	//{"wireless", cmd_wireless},
 	{"coldboot", cmd_cold_boot},
@@ -4385,11 +4384,13 @@ const char help_str[] =
 	"  led <name> <query | auto | off | <color> | <color>=<value>...>\n"
 	"      Set the color of an LED or query brightness range\n"
 	"  loginfo\n"
-	"  	   read shutdown case and wakeup case from eflash"
+	"  	   read shutdown ID and wakeup ID from eflash\n"
 	"  logread\n"
     "      read flash log\n"
+    "  logwrite <log_id>\n"
+	"  	   write shutdown/wakeup ID to eflash\n"
     "  loganalyse\n"
-    "      analyse flash log shutdown/wakeup \n"
+    "      analyse flash log shutdown/wakeup ID\n"
     "  mfgdataread <index>\n"
     "      read mfg data \n"
     "  mfgdatawrite <index> <data>\n"
@@ -4414,7 +4415,6 @@ const char help_str[] =
 	"      Prints the number of fans present\n"
 	"  pwmsetfanrpm <targetrpm>\n"
 	"      Set target fan RPM\n"
-    
 	"  rebootec <RO|RW|cold|cold-ap-off|hibernate|hibernate-clear-ap-off|disable-jump>"
 			" [at-shutdown|switch-slot]\n"
 	"      Reboot EC to RO or RW\n"
@@ -4440,8 +4440,6 @@ const char help_str[] =
 	"      Prints EC version\n"
 	"  wdtset <type> <flag> <time>\n"
 	"      set external WDT\n"
-	"  writelog <log_id>\n"
-	"  	   write log to eflash\n"
 	"  coldboot <cycle> <time>\n"
 	"      Requests that the EC will automatically start the AP the next time\n"
 	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
