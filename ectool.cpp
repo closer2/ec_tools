@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V0.3"
+#define TOOLS_VER   "V0.4"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -2512,6 +2512,12 @@ int cmd_analysis_log(int argc, char *argv[])
 	char date[32];
 	uint32_t buf[2048];
 
+	if (argc != 2)
+	{
+		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+		return -1;
+	}
+
     /********************************************
     * shutdown cause
     ********************************************/
@@ -2521,9 +2527,9 @@ int cmd_analysis_log(int argc, char *argv[])
 		return rv;
 	}
 	
-	if((binaryFile = fopen("8k_shutdown_wakeup_cause.bin","r")) == NULL)
+	if((binaryFile = fopen(argv[1],"r")) == NULL)
 	{
-		printf("8k_shutdown_wakeup_cause.bin not exist\n\n");
+		printf("%s not exist\n\n", argv[1]);
 		return -1;
 	}
 
@@ -4399,7 +4405,7 @@ const char help_str[] =
     "      read flash log\n"
     "  logwrite <log_id>\n"
 	"  	   write shutdown/wakeup ID to eflash\n"
-    "  loganalyse\n"
+    "  loganalyse <filename>\n"
     "      analyse flash log shutdown/wakeup ID\n"
     "  mfgdataread <index>\n"
     "      read mfg data \n"
