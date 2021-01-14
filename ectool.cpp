@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V0.5"
+#define TOOLS_VER   "V0.6"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -2454,7 +2454,7 @@ int cmd_log_info(int argc, char *argv[])
 int cmd_read_8k_log(int argc, char *argv[])
 {
 	int offset, size;
-	int rv;
+	int rv, i;
 	char *e;
 	uint8_t *buf;
 	char date[64];
@@ -2480,6 +2480,13 @@ int cmd_read_8k_log(int argc, char *argv[])
 
 	get_current_time(date);
 	analysis_data(date);
+	for(i = 0; date[i] != '\0'; i++)
+	{
+		if('/' == date[i] || ':' == date[i])
+			date[i] = '-';
+		else if(' ' == date[i])
+			date[i] = '#';
+	}
 	filename = strcat(date, ".bin");
 	rv = write_file(filename, buf, size);
 	free(buf);
