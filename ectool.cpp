@@ -2702,8 +2702,10 @@ int cmd_mfg_mode(int argc, char *argv[])
 		rv = read_mapped_mem8(EC_MEMMAP_MFG_MODE);
 		if(0xFF == rv)
 			printf("MFG MODE\n");
+		else if(0xBF == rv)
+			printf("NO MFG MODE\n");
 		else
-			printf("NO MODE\n");
+			printf("unkown\n");
 		
 		return 0;
 	}
@@ -2715,7 +2717,7 @@ int cmd_mfg_mode(int argc, char *argv[])
 	}
 	else if(!strcmp(argv[1], "off"))
 	{
-		p.data = 0;
+		p.data = 0xBF;
 	}
 	
 	rv = ec_command(EC_CMD_FLASH_SET_MFG_DATA, 0, &p, sizeof(p), NULL, 0);
