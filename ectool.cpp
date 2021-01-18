@@ -3478,6 +3478,8 @@ int cmd_temperature(int argc, char *argv[])
 	int rv;
 	int id;
 	char *e;
+	struct ec_params_temp_sensor_get_info p;
+	struct ec_response_temp_sensor_get_info r;
 
 	if (argc != 2)
     {
@@ -3506,8 +3508,10 @@ int cmd_temperature(int argc, char *argv[])
 					id);
 				break;
 			default:
-				printf(" Sensor ID[%d]: %d(K) %.1f(C)\n",
-                            id, rv + EC_TEMP_SENSOR_OFFSET, (rv-73.15));
+				p.id = id;
+				ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
+						&p, sizeof(p), &r, sizeof(r));
+				printf(" %s: \t%d(C)\n", r.sensor_name, rv);
 			}
 		}
 		return 0;
@@ -3527,7 +3531,6 @@ int cmd_temperature(int argc, char *argv[])
 
 	printf("Reading temperature...\n");
 	rv = read_mapped_temperature(id);
-
 	switch (rv) {
 	case EC_TEMP_SENSOR_NOT_PRESENT:
 		printf("Sensor not present\n");
@@ -3542,8 +3545,10 @@ int cmd_temperature(int argc, char *argv[])
 		fprintf(stderr, "Sensor not calibrated\n");
 		return -1;
 	default:
-		printf(" Sensor ID[%d]: %d(K) %.1f(C)\n",
-                            id, rv + EC_TEMP_SENSOR_OFFSET, (rv-73.15));
+		p.id = id;
+		ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
+				&p, sizeof(p), &r, sizeof(r));
+		printf(" %s: \t%d(C)\n", r.sensor_name, rv);
 		return 0;
 	}
 }

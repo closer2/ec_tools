@@ -269,10 +269,10 @@ extern "C" {
 #define EC_TEMP_SENSOR_ENTRIES     8
 
 /* Special values for mapped temperature sensors */
-#define EC_TEMP_SENSOR_NOT_PRESENT    0xff
-#define EC_TEMP_SENSOR_ERROR          0xfe
-#define EC_TEMP_SENSOR_NOT_POWERED    0xfd
-#define EC_TEMP_SENSOR_NOT_CALIBRATED 0xfc
+#define EC_TEMP_SENSOR_NOT_PRESENT    0x00
+#define EC_TEMP_SENSOR_NOT_POWERED    0x01
+#define EC_TEMP_SENSOR_ERROR          0x02
+#define EC_TEMP_SENSOR_NOT_CALIBRATED 0x03
 /*
  * The offset of temperature value stored in mapped memory.  This allows
  * reporting a temperature range of 200K to 454K = -73C to 181C.
