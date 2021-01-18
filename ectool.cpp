@@ -1,11 +1,15 @@
-#define TOOLS_VER   "V0.6"
+#define TOOLS_VER   "V1.0"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// WinFlash EC tool Version : 0.1
+// WinFlash EC tool Version : 1.0
 // 1. First Release
-//    a. Update IT8987 eFlash (128K)
-//    b. Update SPI flash (64K, 128K)
+//	a. mfgmode <disable>
+//	b. powerled <on | off>
+//	c. pwmgetfanrpm [<index> | all]
+//	d. pwmsetfanrpm <targetrpm>
+//	e. temps <sensorid | all>
+//	f. coldboot <cycle> <time>
 //******************************************************************************
 
 
@@ -2689,11 +2693,10 @@ int cmd_mfg_data_write(int argc, char *argv[])
 
 int cmd_mfg_mode(int argc, char *argv[])
 {
-	struct ec_params_mfg_data p;
 	int rv;
 
 	if (argc > 2) {
-		fprintf(stderr,"Usage: %s <on | off>\n", argv[0]);
+		fprintf(stderr,"Usage: %s <disable>\n", argv[0]);
 		return -1;
 	}
 	
@@ -2702,27 +2705,30 @@ int cmd_mfg_mode(int argc, char *argv[])
 		rv = read_mapped_mem8(EC_MEMMAP_MFG_MODE);
 		if(0xFF == rv)
 			printf("MFG MODE\n");
-		else if(0xBF == rv)
+		else if(0xBE == rv)
 			printf("NO MFG MODE\n");
 		else
-			printf("unkown\n");
+			printf("unkown code: 0x%02x\n", rv);
 		
 		return 0;
 	}
 
-	p.index = MFG_MODE_OFFSET;
-	if(!strcmp(argv[1], "on"))
+	if(!strcmp(argv[1], "disable"))
 	{
-		p.data = 0xFF;
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x0E);
 	}
-	else if(!strcmp(argv[1], "off"))
+	else
 	{
-		p.data = 0xBF;
+		fprintf(stderr,"Usage: %s <disable>\n", argv[0]);
+		return -1;
 	}
 	
-	rv = ec_command(EC_CMD_FLASH_SET_MFG_DATA, 0, &p, sizeof(p), NULL, 0);
-	if (rv < 0)
-		return rv;
+	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
+	{
+		printf("EC_MEMMAP_BIOS_CMD_STATUS = 0x%02x\n", read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS));
+		return -1;
+	}
 
 	return 0;
 }
@@ -3170,7 +3176,6 @@ int cmd_set_external_wdt(int argc, char *argv[])
 
 	if(!strcmp("enable", argv[2]))
 	{
-		outb(0x01, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* enable */
 		time = strtol(argv[3], &e, 0);
 		if (e && *e) {
 			fprintf(stderr, "Bad WDT time.\n");
@@ -3178,14 +3183,15 @@ int cmd_set_external_wdt(int argc, char *argv[])
 		}
 		low = time;
 		high = time >> 8;
-		outb(low, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1);	/* low byte time */
-		outb(high, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2);	/* high byte time */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);		/* enable */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1, low);		/* low byte time */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2, high);	/* high byte time */
 	}
 	else if(!strcmp("disable", argv[2]))
 	{
-		outb(0x02, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* disable */
-		outb(0, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1);	/* low byte time = 0 */
-		outb(0, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2);	/* low byte time = 0 */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);	/* disable */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1, 0);	/* low byte time = 0 */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2, 0);	/* low byte time = 0 */
 	}
 	else 
 	{
@@ -3195,9 +3201,9 @@ int cmd_set_external_wdt(int argc, char *argv[])
 	}
 
 	if(!strcmp("wakeup", argv[1]))
-		outb(0x04, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* wakeup wdt control */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x04);	/* wakeup wdt control */
 	else if(!strcmp("shutdown", argv[1]))
-		outb(0x05, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* shutdown wdt control */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x05);	/* shutdown wdt control */
 	else 
 	{
 		fprintf(stderr, "Bad type name: %s\n", argv[1]);
@@ -3414,13 +3420,13 @@ int cmd_power_led(int argc, char *argv[])
 	
 	if(!strcmp("on", argv[1]))
 	{
-		outb(0x01, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* on */
-		outb(0x06, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* power LED control */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);	/* on */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x06);	/* power LED control */
 	}
 	else if(!strcmp("off", argv[1]))
 	{
-		outb(0x02, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA);	/* off */
-		outb(0x06, EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD);	/* power LED control */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);	/* off */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x06);	/* power LED control */
 	}
 
 	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
@@ -4438,8 +4444,8 @@ const char help_str[] =
     "      read mfg data \n"
     "  mfgdatawrite <index> <data>\n"
     "      write mfg data \n"
-    "  mfgmode <on | off>\n"    
-	"	   read MFG status or turn on/off MFG mode\n"
+    "  mfgmode <disable>\n"    
+	"	   read MFG mode status or disable MFG mode\n"
 	"  odmversion\n"
 	"      read ODM EC version\n"
 	"  pwrbtnstart\n"
@@ -4471,7 +4477,7 @@ const char help_str[] =
 	"      Set real-time clock alarm to go off in <sec> seconds\n"
 	"  sysinfo [flags|reset_flags|firmware_copy]\n"
 	"      Display system info.\n"
-	"  temps <sensorid>\n"
+	"  temps <sensorid | all>\n"
 	"      Print temperature.\n"
 	"  tempsinfo <sensorid>\n"
 	"      Print temperature sensor info.\n"
