@@ -2772,7 +2772,7 @@ int cmd_ODM_version(int argc, char *argv[])
 		return -1;
 	}
 
-	if (!strcmp(argv[1], "help"))
+	if (argc == 2 && !strcmp(argv[1], "help"))
 	{
 		printf("------------------------------------------------------------------------\n");
 		printf("*	ODM EC version define\n");
