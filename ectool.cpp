@@ -1675,6 +1675,38 @@ int cmd_fanduty(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_fingerprint(int argc, char *argv[])
+{
+	struct ec_params_fingerprint p;
+	char *e;
+	int rv;
+
+	if (argc != 2) 
+	{
+		fprintf(stderr, "Usage: %s <MCU | CPU>\n", argv[0]);
+		return -1;
+	}
+
+	if(!strcmp("MCU", argv[1]))
+		p.role = 0;
+	else if(!strcmp("CPU", argv[1]))
+		p.role = 1;
+	else
+	{
+		fprintf(stderr, "Bad role.\n");
+		fprintf(stderr, "role: <MCU | CPU>\n");
+		return -1;
+	}
+	
+	rv = ec_command(EC_CMD_SWITCH_FINGERPRINT, 0,
+				&p, sizeof(p), NULL, 0);
+	if (rv < 0)
+		return rv;
+	
+	printf("switch success!");
+	return 0;
+}
+
 int is_string_printable(const char *buf)
 {
 	while (*buf) {
@@ -4283,6 +4315,7 @@ const struct command Tool_Cmd_Array[] = {
     {"ecbackup", cmd_backup_ec},
 	//{"extpwrlimit", cmd_ext_power_limit},
 	{"fanduty", cmd_fanduty},
+	{"fingerprint", cmd_fingerprint},
 	//{"flasherase", cmd_flash_erase},
 	//{"flasheraseasync", cmd_flash_erase},
 	//{"flashprotect", cmd_flash_protect},
@@ -4425,6 +4458,8 @@ const char help_str[] =
 	"      ecbackup backup.bin\n"
 	"  fanduty <percent>\n"
 	"      Forces the fan PWM to a constant duty cycle\n"
+	"  fingerprint <MCU | CPU>"
+	"      switch fingerprint usb connection to MCU or CPU"
 	"  flashread <offset> <size> <outfile>\n"
 	"      Reads from EC flash to a file\n"
 	"  flashinfo\n"
