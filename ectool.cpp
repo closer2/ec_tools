@@ -4293,6 +4293,7 @@ const struct command Tool_Cmd_Array[] = {
 	{"chipinfo", cmd_chipinfo},
 	//{"cmdversions", cmd_cmdversions},
 	{"console", cmd_console},
+	{"coldboot", cmd_cold_boot},
 	//{"cec", cmd_cec},
 	//{"echash", cmd_ec_hash},
 	//{"eventclear", cmd_host_event_clear},
@@ -4426,7 +4427,6 @@ const struct command Tool_Cmd_Array[] = {
 	{"wdtset", cmd_set_external_wdt},
 	//{"waitevent", cmd_wait_event},
 	//{"wireless", cmd_wireless},
-	{"coldboot", cmd_cold_boot},
 	{"Last_Cmd", void_function}
 };
 
@@ -4438,16 +4438,15 @@ const char help_str[] =
 	"      Issue AP reset\n"
 	"  autofanctrl <on>\n"
 	"      Turn on automatic fan speed control.\n"
-//	"  battery\n"
-//	"      Prints battery info\n"
-//	"  batterycutoff [at-shutdown]\n"
-//	"      Cut off battery output power\n"
 	"  boardversion\n"
 	"      Prints the board version\n"
 	"  chipinfo\n"
 	"      Prints chip info\n"
 	"  console\n"
 	"      Prints the last output to the EC debug console\n"
+	"  coldboot <cycle> <time>\n"
+	"      Requests that the EC will automatically start the AP the next time\n"
+	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
     "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
 	"  ecbackup <filename>\n"
@@ -4525,11 +4524,7 @@ const char help_str[] =
 	"      Prints EC version\n"
 	"  wdtset <type> <flag> <time>\n"
 	"      set external WDT\n"
-	"  coldboot <cycle> <time>\n"
-	"      Requests that the EC will automatically start the AP the next time\n"
-	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
 	"";
-
 
 void help(void)
 {
