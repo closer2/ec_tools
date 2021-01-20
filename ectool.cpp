@@ -1672,16 +1672,18 @@ int cmd_fanduty(int argc, char *argv[])
 int cmd_fingerprint(int argc, char *argv[])
 {
 	struct ec_params_fingerprint p;
-	char *e;
+	struct ec_response_fingerprint r;
 	int rv;
 
-	if (argc != 2) 
+	if (argc > 2)
 	{
 		fprintf(stderr, "Usage: %s <MCU | CPU>\n", argv[0]);
 		return -1;
 	}
 
-	if(!strcmp("MCU", argv[1]))
+	if(argc == 1)
+		p.role = 0xaa;
+	else if(!strcmp("MCU", argv[1]))
 		p.role = 0;
 	else if(!strcmp("CPU", argv[1]))
 		p.role = 1;
@@ -1693,11 +1695,17 @@ int cmd_fingerprint(int argc, char *argv[])
 	}
 	
 	rv = ec_command(EC_CMD_SWITCH_FINGERPRINT, 0,
-				&p, sizeof(p), NULL, 0);
+				&p, sizeof(p), &r, sizeof(r));
 	if (rv < 0)
 		return rv;
-	
-	printf("switch success!");
+
+	if(0xaa == r.role)
+		printf("switch success!");
+	else if (1 == r.role)
+		printf("switched to CPU.");
+	else if (0 == r.role)
+		printf("switched to MCU.");
+		
 	return 0;
 }
 
