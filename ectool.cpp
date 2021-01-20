@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V1.0"
+#define TOOLS_VER   "V1.1"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// WinFlash EC tool Version : 1.0
+// ectool Version : 1.1
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -11,8 +11,6 @@
 //	e. temps <sensorid | all>
 //	f. coldboot <cycle> <time>
 //******************************************************************************
-
-
 
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
@@ -24,14 +22,10 @@
    ----PM-port(62/66)
    ----KBC-port(60/64)
    ----EC-port(2E/2F or 4E/4F)
-   ----Decicated I/O Port(301/302/303)
+   ----Decicated I/O(800) I/O(900)
    
-   
-	Using VS2012 X86 cmd tool to compilation
-	For windows-32/64bit
+	Using VS2015 X86 cmd tool to compilation For windows-32/64bit
 */
-
-
 
 //=============================Include file ====================================
 #include <iostream>
@@ -4298,7 +4292,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"chargestate", cmd_charge_state},
 	{"chipinfo", cmd_chipinfo},
 	//{"cmdversions", cmd_cmdversions},
-	//{"console", cmd_console},
+	{"console", cmd_console},
 	//{"cec", cmd_cec},
 	//{"echash", cmd_ec_hash},
 	//{"eventclear", cmd_host_event_clear},
@@ -4452,6 +4446,8 @@ const char help_str[] =
 	"      Prints the board version\n"
 	"  chipinfo\n"
 	"      Prints chip info\n"
+	"  console\n"
+	"      Prints the last output to the EC debug console\n"
     "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
 	"  ecbackup <filename>\n"
