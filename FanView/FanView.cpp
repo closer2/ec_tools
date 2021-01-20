@@ -759,6 +759,7 @@ uint32_t get_fan_targetrpm(uint8_t index)
 FILE *BAT_LogFile = NULL;
 FILE *CfgFile = NULL;
 unsigned int SetTime;
+int BAT_LogFile_flag = 0;
 
 typedef struct BatteryInfoStruct
 {
@@ -932,7 +933,7 @@ void ReadCfgFile(void)
                 while(('#' != (*pStrLine++)));
                 HexNum = (int)strtol(pStrLine, &str, 10);
                 //printf("Log file : %d\n",HexNum);
-                BAT_LogFile = (FILE*)HexNum;
+                BAT_LogFile_flag = HexNum;
             }
             if('1' == StrLine[3])
             {
@@ -1346,7 +1347,7 @@ int main(int argc, char *argv[])
     PollFanInfo();
     
     //---------------------------------------Creat log file---------------------------------------------
-    if(BAT_LogFile)
+    if(BAT_LogFile_flag)
     {
         time_t t = time(0);
         char tmp[64];
