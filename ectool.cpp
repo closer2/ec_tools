@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V1.1"
+#define TOOLS_VER   "V2.0"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 1.1
+// ectool Version : 2.0
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
