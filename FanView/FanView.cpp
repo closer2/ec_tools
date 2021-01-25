@@ -344,6 +344,9 @@ struct ec_params_pwm_set_fan_target_rpm_v1 {
 	uint8_t fan_idx;
 } __ec_align_size1;
 
+/* Toggle automatic fan control */
+#define EC_CMD_THERMAL_AUTO_FAN_CTRL 0x0052
+
 /*************************************************************/
 
 #define EC_LPC_STATUS_FROM_HOST   0x02
@@ -505,6 +508,18 @@ uint32_t get_fan_targetrpm(uint8_t index)
 	return r.rpm;
 }
 
+int thermal_auto_fan_ctrl(void)
+{
+	int rv;
+	int cmdver = 0;
+
+	rv = ec_command_lpc_3(EC_CMD_THERMAL_AUTO_FAN_CTRL, cmdver,
+			NULL, 0, NULL, 0);
+	if (rv < 0)
+		return rv;
+
+	return 0;
+}
 
 //==============================================================================
 
@@ -957,6 +972,7 @@ int main(int argc, char *argv[])
 {
     char IOInitOK=0;
     int i;
+	int rv;
 
     IOInitOK = InitializeWinIo();
     if(IOInitOK)
@@ -1027,6 +1043,11 @@ int main(int argc, char *argv[])
         
         display();
     }
+	
+	//switch to auto fan ctrl.
+	rv = thermal_auto_fan_ctrl();
+	if(rv < 0)
+		printf("switch auto fan ctrl failed!");
     
     if(BAT_LogFile)
     {
