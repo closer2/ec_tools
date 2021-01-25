@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.1"
+#define TOOLS_VER   "V2.2"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.1
+// ectool Version : 2.2
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -2418,14 +2418,14 @@ int ec_flash_read(uint8_t *buf, int offset, int size)
 	return 0;
 }
 
-int read_shutdown_wakeup_case_to_linklist(void)
+int read_shutdown_wakeup_case_to_linklist(char *filename)
 {
 	int i;
 	uint32_t buf[2048];
 
-	if((binaryFile = fopen("8k_shutdown_wakeup_cause.bin","r")) == NULL)
+	if((binaryFile = fopen(filename,"r")) == NULL)
 	{
-		printf("8k_shutdown_wakeup_cause.bin not exist\n\n");
+		printf("%s not exist\n\n", filename);
 		return -1;
 	}
 	fread(buf, 4, 2048, binaryFile);
@@ -2450,34 +2450,41 @@ int read_shutdown_wakeup_case_to_linklist(void)
 int cmd_log_info(int argc, char *argv[])
 {
 	int rv;
+	char log_txt[64];
 
-    if (argc != 1)
+    if (argc != 2)
     {
-		fprintf(stderr, "Usage: %s \n", argv[0]);
+		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
 		return -1;
 	}
 
+	/* read shutdown cause list */
 	rv = read_shutdown_case_into_linklist();
 	if(rv < 0)
-	{
 		return rv;
-	}
 
+	/* read wakeup cause list */
 	rv = read_wakeup_case_into_linklist();
 	if(rv < 0)
-	{
 		return rv;
-	}
 
-	txtFile = fopen("LogInfo.txt","w");
+	/* read shutdown/wakeup cause in the bin file */
+	rv = read_shutdown_wakeup_case_to_linklist(argv[1]);
+	if(rv < 0)
+		return rv;
+	
+	sort_raw_log_linklist(raw_log_head);
+
+	strcpy(log_txt, argv[1]);
+	log_txt[strlen(log_txt)-4] = '\0';
+	strcat(log_txt, "#LogInfo.txt");
+	txtFile = fopen(log_txt,"w");
 	if(txtFile == NULL)
 	{
 		printf("Creat default LogInfo.txt file Fail\n\n");
 		return -1;
 	}
 	
-	read_shutdown_wakeup_case_to_linklist();
-	sort_raw_log_linklist(raw_log_head);
 	analysis_seq_linklist(seq_log_head);
 	
 	fclose(txtFile);
@@ -4482,8 +4489,8 @@ const char help_str[] =
 	"      Checks for basic communication with EC\n"
 	"  led <name> <query | auto | off | <color> | <color>=<value>...>\n"
 	"      Set the color of an LED or query brightness range\n"
-	"  loginfo\n"
-	"  	   read shutdown ID and wakeup ID from eflash\n"
+	"  loginfo <filename>\n"
+	"  	   read shutdown cause and wakeup cause from filename\n"
 	"  logread\n"
     "      read flash log\n"
     "  logwrite <log_id>\n"
