@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.2"
+#define TOOLS_VER   "V2.3"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.2
+// ectool Version : 2.3
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -2183,6 +2183,45 @@ int cmd_host_event_clear_b(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_g3_ctrl(int argc, char *argv[])
+{
+	int rv;
+	
+	if(argc > 2) {
+		fprintf(stderr, "Usage: %s <enable | disable>\n", argv[0]);
+		return -1;
+	}
+
+	if(1 == argc)
+	{
+		rv = read_mapped_mem8(EC_MEMMAP_POWER_FLAG1);
+		if(0 == rv & EC_MEMMAP_DISABLE_G3)
+			printf("system G3 enable\n");
+		else if(1 == rv & EC_MEMMAP_DISABLE_G3)
+			printf("system G3 disable\n");
+		else
+			printf("unknow status 0x%02x\n", rv);
+	}
+	else if(!strcmp("disable", argv[1]))
+	{
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);	/* disable */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x03);		/* system G3 control */
+	}
+	else if(!strcmp("enable", argv[1]))
+	{
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x00);	/* enable */
+		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x03);		/* system G3 control */
+	}
+	else
+	{
+		fprintf(stderr, "Usage: %s <enable | disable>\n", argv[0]);
+	}
+
+	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
+		return -1;
+
+	return 0;
+}
 
 int cmd_gpio_get(int argc, char *argv[])
 {
@@ -4350,6 +4389,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"fpseed", cmd_fp_seed},
 	//{"fpstats", cmd_fp_stats},
 	//{"fptemplate", cmd_fp_template},
+	{"g3ctrl", cmd_g3_ctrl},
 	{"gpioget", cmd_gpio_get},
 	{"gpioset", cmd_gpio_set},
 	//{"hangdetect", cmd_hang_detect},
@@ -4481,6 +4521,8 @@ const char help_str[] =
 	"      Reads from EC flash to a file\n"
 	"  flashinfo\n"
 	"      Prints information on the EC flash\n"
+	"  g3ctrl <enable | disable>"
+	"      read system g3 status or enable/disable system G3\n"
 	"  gpioget <GPIO name>\n"
 	"      Get the value of GPIO signal\n"
 	"  gpioset <GPIO name>\n"
