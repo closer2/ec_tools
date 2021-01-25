@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.0"
+#define TOOLS_VER   "V2.1"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.0
+// ectool Version : 2.1
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -2574,6 +2574,7 @@ int cmd_analysis_log(int argc, char *argv[])
 	int i, rv;
 	char date[32];
 	uint32_t buf[2048];
+	char log_txt[64];
 
 	if (argc != 2)
 	{
@@ -2598,8 +2599,11 @@ int cmd_analysis_log(int argc, char *argv[])
 
 	fread(buf, 4, 2048, binaryFile);
     fclose(binaryFile);
-    
-	SDTxtFile = fopen("shutdown-cause.txt","w");
+
+	strcpy(log_txt, argv[1]);
+	log_txt[strlen(log_txt)-4] = '\0';
+	strcat(log_txt, "#shutdown-cause.txt");
+	SDTxtFile = fopen(log_txt, "w");
 	if(SDTxtFile == NULL)
 	{
 		printf("Creat shutdown-cause.txt file Fail\n\n");
@@ -2634,7 +2638,10 @@ int cmd_analysis_log(int argc, char *argv[])
 		return rv;
 	}
 
-	WUTxtFile = fopen("wakeup-cause.txt","w");
+	strcpy(log_txt, argv[1]);
+	log_txt[strlen(log_txt)-4] = '\0';
+	strcat(log_txt, "#wakeup-cause.txt");
+	WUTxtFile = fopen(log_txt,"w");
 	if(WUTxtFile == NULL)
 	{
 		printf("Creat wakeup-cause.txt file Fail\n\n");
