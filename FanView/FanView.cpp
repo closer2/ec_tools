@@ -1,33 +1,19 @@
-#define  TOOLS_VER   "V2.0"
+#define  TOOLS_VER   "V2.1"
 
-//*****************************************
-// BatteryTool Version : 2.0
-//*****************************************
-// Init IT-557x chip
+/* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
-//*****************************************
-// BatteryTool Version : 1.0
-//*****************************************
-// First release
-
-
-/* Copyright (C)Copyright 2005-2020 ZXQ Telecom. All rights reserved.
-
-   Author: Morgen Zhu
+   Author: MorgenZhu,ZhouHao
    
-   Description:These functions of this file are reference only in the Windows!
-   It can read/write ITE-EC RAM by 
+   Description: These functions of this file are reference only in the Windows!
+   It can read/write chromium-EC RAM by 
    ----PM-port(62/66)
-   ----KBC-port(60/64)
-   ----EC-port(2E/2F or 4E/4F)
-   ----Decicated I/O Port(301/302/303)
+   ----Decicated I/O(800) I/O(900)
+   
+	Using VS2015 X86 cmd tool to compilation For windows-32/64bit
 */
-
-
-// Using VS2012 X86 cmd tool to compilation
 // For windows-32/64bit
 
-//=======================================Include file ==============================================
+//=======================================Include file ==========================
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,21 +34,21 @@ using namespace std;
 #pragma comment(lib,"WinIox64.lib")    // For 64bit
 
 #pragma comment(lib, "Powrprof.lib")
-//==================================================================================================
+//==============================================================================
 
-//========================================Type Define ==============================================
+//========================================Type Define ==========================
 typedef unsigned char   BYTE;
 typedef unsigned char   UINT8;
 #define TRUE            1
 #define FALSE           0
-//==================================================================================================
+//==============================================================================
 
-//==========================The hardware port to read/write function================================
+//==========================The hardware port to read/write function============
 #define READ_PORT(port,data2)  GetPortVal(port, &data2, 1);
 #define WRITE_PORT(port,data2) SetPortVal(port, data2, 1)
-//==================================================================================================
+//==============================================================================
 
-//======================================== PM channel ==============================================
+//======================================== PM channel ==========================
 #define PM_STATUS_PORT66          0x66
 #define PM_CMD_PORT66             0x66
 #define PM_DATA_PORT62            0x62
@@ -130,221 +116,9 @@ BYTE EC_ReadByte_PM(BYTE index)
     data = Read_data_from_PM();
     return data;
 }
-//==================================================================================================
+//==============================================================================
 
-//================================KBC channel=======================================================
-#define KBC_STATUS_PORT64         0x64
-#define KBC_CMD_PORT64            0x64
-#define KBC_DATA_PORT60           0x60
-#define KBC_OBF                   0x01
-#define KBC_IBF                   0x02
-// wait EC KBC channel port64 output buffer full
-void Wait_KBC_OBF (void)
-{   
-    DWORD data;
-    READ_PORT(KBC_STATUS_PORT64, data);
-    while(!(data& KBC_OBF))
-    {
-        READ_PORT(KBC_STATUS_PORT64, data);
-    }
-}
-
-// wait EC KBC channel port64 output buffer empty
-void Wait_KBC_OBE (void)
-{
-    DWORD data;
-    READ_PORT(KBC_STATUS_PORT64, data);
-    while(data& KBC_OBF)
-    {
-        READ_PORT(KBC_DATA_PORT60, data);
-        READ_PORT(KBC_STATUS_PORT64, data);
-    }
-}
-
-// wait EC KBC channel port64 input buffer empty
-void Wait_KBC_IBE (void)
-{
-    DWORD data;
-    READ_PORT(KBC_STATUS_PORT64, data);
-    while(data& KBC_IBF)
-    {
-        READ_PORT(KBC_STATUS_PORT64, data);
-    }
-}
-
-// send command by EC KBC channel
-void Send_cmd_by_KBC (BYTE Cmd)
-{
-    Wait_KBC_OBE();
-    Wait_KBC_IBE();
-    WRITE_PORT(KBC_CMD_PORT64, Cmd);
-    Wait_KBC_IBE();
-}
-
-// send data by EC KBC channel
-void Send_data_by_KBC (BYTE Data)
-{
-    Wait_KBC_OBE();
-    Wait_KBC_IBE();
-    WRITE_PORT(KBC_DATA_PORT60, Data);
-    Wait_KBC_IBE();
-}
-
-// read data from EC KBC channel
-BYTE Read_data_from_KBC(void)
-{
-    DWORD data;
-    Wait_KBC_OBF();
-    READ_PORT(KBC_DATA_PORT60, data);
-    return(data);
-}
-// Write EC RAM via KBC port(60/64)
-void EC_WriteByte_KBC(BYTE index, BYTE data)
-{
-    Send_cmd_by_KBC(0x81);
-    Send_data_by_KBC(index);
-    Send_data_by_KBC(data);
-}
-
-// Read EC RAM via KBC port(60/64)
-BYTE EC_ReadByte_KBC(BYTE index)
-{
-    Send_cmd_by_KBC(0x80);
-    Send_data_by_KBC(index);
-    return Read_data_from_KBC();
-}
-//==================================================================================================
-
-//=======================================EC Direct Access interface=================================
-//Port Config:
-//  BADRSEL(0x200A) bit1-0  Addr    Data
-//                  00      2Eh     2Fh
-//                  01      4Eh     4Fh
-//
-//              01      4Eh     4Fh
-//  ITE-EC Ram Read/Write Algorithm:
-//  Addr    w   0x2E
-//  Data    w   0x11
-//  Addr    w   0x2F
-//  Data    w   high byte
-//  Addr    w   0x2E
-//  Data    w   0x10
-//  Addr    w   0x2F
-//  Data    w   low byte
-//  Addr    w   0x2E
-//  Data    w   0x12
-//  Addr    w   0x2F
-//  Data    rw  value
-UINT8 EC_ADDR_PORT = 0x4E;   // 0x2E or 0x4E
-UINT8 EC_DATA_PORT = 0x4F;   // 0x2F or 0x4F
-UINT8 High_Byte    = 0;
-// Write EC RAM via EC port(2E/2F or 4E/4F)
-void ECRamWrite_Direct(unsigned short iIndex, BYTE data)
-{
-    DWORD data1;
-    data1 = data;
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x11);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, High_Byte); // High byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x10);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex);  // Low byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x12);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, data1);
-}
-
-UINT8 ECRamRead_Direct(UINT8 iIndex)
-{
-    DWORD data;
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x11);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, High_Byte); // High byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x10);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex);  // Low byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x12);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    READ_PORT(EC_DATA_PORT, data);
-    return(data);
-}
-
-
-unsigned char ECRamReadExt_Direct(unsigned short iIndex)
-{
-    DWORD data;
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x11);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex>>8); // High byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x10);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex&0xFF);  // Low byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x12);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    READ_PORT(EC_DATA_PORT, data);
-    return(data);
-}
-
-void ECRamWriteExt_Direct(unsigned short iIndex, BYTE data)
-{
-    DWORD data1;
-    data1 = data;
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x11);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex>>8);    // High byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x10);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, iIndex&0xFF);  // Low byte
-
-    WRITE_PORT(EC_ADDR_PORT, 0x2E);
-    WRITE_PORT(EC_DATA_PORT, 0x12);
-    WRITE_PORT(EC_ADDR_PORT, 0x2F);
-    WRITE_PORT(EC_DATA_PORT, data1);
-}
-//==================================================================================================
-
-//=======================================Decicated I/O Port Operation===============================
-// Need EC code configuration and need BIOS decode I/O
-#define HIGH_BYTE_PORT    0x301
-#define LOW_BYTE_PORT     (HIGH_BYTE_PORT+1)
-#define DATA_BYTE_PORT    (HIGH_BYTE_PORT+2)  // Decicated I/O Port
-
-BYTE EC_ReadByte_DeIO(BYTE iIndex)
-{
-    DWORD data;
-    SetPortVal(HIGH_BYTE_PORT, High_Byte, 1);
-    SetPortVal(LOW_BYTE_PORT, iIndex, 1);
-    GetPortVal(DATA_BYTE_PORT, &data, 1);
-    return data;
-}
-
-void EC_WriteByte_DeIO(BYTE iIndex, BYTE data)
-{
-    SetPortVal(HIGH_BYTE_PORT, High_Byte, 1);
-    SetPortVal(LOW_BYTE_PORT, iIndex, 1);
-    SetPortVal(DATA_BYTE_PORT, data, 1);
-}
-//==================================================================================================
-
-//===============================Console control interface==========================================
+//===============================Console control interface======================
 #define EFI_BLACK                 0x00
 #define EFI_BLUE                  0x01
 #define EFI_GREEN                 0x02
@@ -399,42 +173,25 @@ void ClearToolCursor()
     SetTextColor(EFI_LIGHTGRAY, EFI_BLACK);
     system("cls");
 }
-//==================================================================================================
+//==============================================================================
 
 //  Example:
-//  ECRamWrite_Direct(0x51,0x90);
-//  EC_WriteByte_KBC(0x52,0x91);
 //  EC_WriteByte_PM(0x53,0x93);
-//  EC_WriteByte_DeIO(0x54,0x94);
 //  printf("%d\n", ECRamRead_Direct(0x51));
 //  printf("%d\n", EC_ReadByte_KBC(0x52));
 //  printf("%d\n", EC_ReadByte_PM(0x53));
 //  printf("%d\n", EC_ReadByte_DeIO(0x54));
 
-// 0x301
-//EC_ReadByte_DeIO
-//EC_WriteByte_DeIO
-
-//0x2E
-//ECRamRead_Direct
-//ECRamWrite_Direct
-//ECRamReadExt_Direct
-//ECRamWriteExt_Direct
-
-//60/64
-//EC_ReadByte_KBC
-//EC_WriteByte_KBC
-
 //62/66
 //EC_ReadByte_PM
 //EC_WriteByte_PM
 
-#define  EC_RAM_WRITE  ECRamWriteExt_Direct
-#define  EC_RAM_READ   ECRamReadExt_Direct
+#define  EC_RAM_WRITE  EC_WriteByte_PM
+#define  EC_RAM_READ   EC_ReadByte_PM
 
-//==================================================================================================
+//==============================================================================
 
-//=======================================Tool info==================================================
+//=======================================Tool info==============================
 #define  TOOLS_NAME  "NPCX FanView"
 #define  ITE_IC      "NPCX7962"
 #define  CopyRight   "(C)Copyright 2021-2030 ZXQ Telecom."
@@ -453,12 +210,12 @@ void ClearToolCursor()
 #define KEY_w        0x77
 #define KEY_s        0x73
 char Key_Value;
-//==================================================================================================
+//==============================================================================
 
 
 
 
-//==================================================================================================
+//==============================================================================
 typedef unsigned char      uint8_t;
 typedef signed char        int8_t;
 
@@ -749,10 +506,10 @@ uint32_t get_fan_targetrpm(uint8_t index)
 }
 
 
-//==================================================================================================
+//==============================================================================
 
 
-//=======================================Battery Info Type==========================================
+//=======================================Battery Info Type======================
 #define  UI_BASE_X   25
 #define  UI_BASE_Y   5
 
@@ -830,14 +587,6 @@ EC_BatteryInfo BAT1_Info[] =
     {"Temp_Sensor11       :", "N/A", "N/A", 0x2a,     0, 0, TRUE, FALSE},
     {"Temp_Sensor12       :", "N/A", "N/A", 0x2b,     0, 0, TRUE, FALSE},
     {"Temp_Sensor13       :", "N/A", "N/A", 0x2c,     0, 0, TRUE, FALSE},
-    //{"Temp_Battery        :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
-    
-    //{"BAT_Mode            :", "N/A", "N/A", 0x402,     0, 0, TRUE, FALSE},
-    //{"BAT_RMC             :", "N/A", "N/A", 0x50A,     0, 0, TRUE, FALSE},
-    //{"BAT_FCC             :", "N/A", "N/A", 0x50C,     0, 0, TRUE, FALSE},
-    //{"RMC/FCC             :", "N/A", "N/A", 0,         0, 0, TRUE, FALSE},
-    //{"BAT_Current         :", "N/A", "N/A", 0x506,     0, 0, TRUE, FALSE},
-    //{"BAT_Voltage         :", "N/A", "N/A", 0x504,     0, 0, TRUE, FALSE},
     
     {"FAN1_Current_RPM    :", "N/A", "N/A", 0x57,   0x56, 0, TRUE, TRUE},
     {"FAN1_Goal_RPM       :", "N/A", "N/A", 0x462,     0, 0, TRUE, TRUE},
@@ -851,7 +600,7 @@ EC_BatteryInfo BAT1_Info[] =
     
     {0, 0, 0, 0, 0, 0}   // end
 };
-//==================================================================================================
+//==============================================================================
 
 void ReadCfgFile(void)
 {
@@ -940,8 +689,6 @@ void ReadCfgFile(void)
                 while(('#' != (*pStrLine++)));
                 HexNum = (int)strtol(pStrLine, &str, 16);
                 //printf("IO : %#X\n",HexNum);
-                EC_ADDR_PORT = HexNum;
-                EC_DATA_PORT = HexNum+1;
             }
             if('2' == StrLine[3])
             {
@@ -967,26 +714,6 @@ void ReadCfgFile(void)
 void ToolInit(void)
 {
     int i,j;
-    /*unsigned char EC_CHIP_ID1;
-    unsigned char EC_CHIP_ID2;
-    unsigned char EC_CHIP_Ver;
-    
-    // ITE IT-557x chip is DLM architecture for EC  RAM and It's support 6K/8K RAM.
-    // If used RAM less  than 4K, you can access EC RAM form 0x000--0xFFF by 4E/4F IO port
-    // If used RAM more than 4K, RAM address change to 0xC000
-    // If you want to access EC RAM by 4E/4F IO port, you must set as follow register first
-    // REG_1060[BIT7]
-    EC_CHIP_ID1 = EC_RAM_READ(0x2000);
-    EC_CHIP_ID2 = EC_RAM_READ(0x2001);
-    if(0x55==EC_CHIP_ID1)
-    {
-        EC_CHIP_Ver = EC_RAM_READ(0x1060);
-        EC_CHIP_Ver = EC_CHIP_Ver | 0x80;
-        EC_RAM_WRITE(0x1060, EC_CHIP_Ver);
-    }
-    
-    SetConsoleTitle(TOOLS_NAME);
-    system("mode con cols=95 lines=60");*/
     
     printf("Fan Tool %s (For ITE %s EC code)\n",TOOLS_VER, ITE_IC);
     printf("%s All rights reserved.\n",CopyRight);
@@ -1008,11 +735,10 @@ void ToolInit(void)
     
     if(BAT1_Info[EC_Version].Active)
     {
-        sprintf(BAT1_Info[EC_Version].InfoValue, "%02d.%02d.%02d",
+        sprintf(BAT1_Info[EC_Version].InfoValue, "%d%02X.%02X",
                 EC_RAM_READ(BAT1_Info[EC_Version].InfoAddr_L),
                 EC_RAM_READ(BAT1_Info[EC_Version].InfoAddr_H),
-                EC_RAM_READ(BAT1_Info[EC_Version].InfoAddr_H+1)
-                /*EC_RAM_READ(BAT1_Info[EC_Version].InfoAddr_H+2)*/);  // The EC version is 4Byte
+                EC_RAM_READ(BAT1_Info[EC_Version].InfoAddr_H+1));
     }
 }
 
@@ -1068,162 +794,87 @@ void PollFanInfo(void)
     }*/
     if(BAT1_Info[Temp_Sensor1].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor1].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor1].InfoAddr_L);
         BAT1_Info[Temp_Sensor1].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor1].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor1].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor2].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor2].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor2].InfoAddr_L);
         BAT1_Info[Temp_Sensor2].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor2].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor2].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor3].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor3].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor3].InfoAddr_L);
         BAT1_Info[Temp_Sensor3].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor3].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor3].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor4].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor4].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor4].InfoAddr_L);
         BAT1_Info[Temp_Sensor4].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor4].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor4].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor5].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor5].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor5].InfoAddr_L);
         BAT1_Info[Temp_Sensor5].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor5].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor5].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor6].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor6].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor6].InfoAddr_L);
         BAT1_Info[Temp_Sensor6].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor6].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor6].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor7].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor7].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor7].InfoAddr_L);
         BAT1_Info[Temp_Sensor7].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor7].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor7].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor8].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor8].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor8].InfoAddr_L);
         BAT1_Info[Temp_Sensor8].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor8].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor8].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor9].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor9].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor9].InfoAddr_L);
         BAT1_Info[Temp_Sensor9].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor9].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor9].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor10].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor10].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor10].InfoAddr_L);
         BAT1_Info[Temp_Sensor10].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor10].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor10].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor11].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor11].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor11].InfoAddr_L);
         BAT1_Info[Temp_Sensor11].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor11].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor11].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor12].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor12].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor12].InfoAddr_L);
         BAT1_Info[Temp_Sensor12].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor12].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor12].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor13].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[Temp_Sensor13].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor13].InfoAddr_L);
         BAT1_Info[Temp_Sensor13].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor13].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor13].InfoInt);
     }
-	
-    /*
-    if(BAT1_Info[BAT_Current].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[BAT_Current].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[BAT_Current].InfoAddr_L);
-
-        if(tmpvalue>0x8000)
-        {
-            tmpvalue ^=0xFFFF;
-            tmpvalue+=1;
-            tmpvalue = -tmpvalue;
-        }
-
-        BAT1_Info[BAT_Current].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[BAT_Current].InfoValue, "%-8d mA",
-                BAT1_Info[BAT_Current].InfoInt);
-    }
-    if(BAT1_Info[BAT_Voltage].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[BAT_Voltage].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[BAT_Voltage].InfoAddr_L);
-        BAT1_Info[BAT_Voltage].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[BAT_Voltage].InfoValue, "%-8d mV",
-                BAT1_Info[BAT_Voltage].InfoInt);
-    }
-    if(BAT1_Info[BAT_Mode].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[BAT_Mode].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[BAT_Mode].InfoAddr_L);
-        BAT1_Info[BAT_Mode].InfoInt = tmpvalue;
-        
-        sprintf(BAT1_Info[BAT_Mode].InfoValue, "%04X [%-5s]",
-                BAT1_Info[BAT_Mode].InfoInt, ((tmpvalue&0x8000)?"mWh":"mAh")); // mAh or 10mWh
-    }
-    if(BAT1_Info[BAT_RMC].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[BAT_RMC].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[BAT_RMC].InfoAddr_L);
-        if(BAT1_Info[BAT_Mode].InfoInt&0x8000)
-        {
-            tmpvalue = tmpvalue*10;
-        }
-        BAT1_Info[BAT_RMC].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[BAT_RMC].InfoValue, "%-8d %s",
-                BAT1_Info[BAT_RMC].InfoInt,
-                ((BAT1_Info[BAT_Mode].InfoInt&0x8000)?"mWh":"mAh"));
-    }
-    if(BAT1_Info[BAT_FCC].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[BAT_FCC].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[BAT_FCC].InfoAddr_L);
-        if(BAT1_Info[BAT_Mode].InfoInt&0x8000)
-        {
-            tmpvalue = tmpvalue*10;
-        }
-        BAT1_Info[BAT_FCC].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[BAT_FCC].InfoValue, "%-8d %s",
-                BAT1_Info[BAT_FCC].InfoInt,
-                ((BAT1_Info[BAT_Mode].InfoInt&0x8000)?"mWh":"mAh"));
-    }
-    if(BAT1_Info[BAT_RealRSOC].Active)
-    {
-        if(BAT1_Info[BAT_FCC].InfoInt)
-        {
-            tmpvalue1 = (BAT1_Info[BAT_RMC].InfoInt*1.0 / BAT1_Info[BAT_FCC].InfoInt)*100;
-        }
-        else
-        {
-            tmpvalue1=0;
-        }
-        sprintf(BAT1_Info[BAT_RealRSOC].InfoValue, "%-8.2f %%", tmpvalue1);
-        BAT1_Info[BAT_RealRSOC].InfoInt = (int)(tmpvalue1+0.5);
-    }
-	*/
     
     if(BAT1_Info[FAN1_Current_RPM].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[FAN1_Current_RPM].InfoAddr_H)<<8
-                | EC_ReadByte_PM(BAT1_Info[FAN1_Current_RPM].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[FAN1_Current_RPM].InfoAddr_H)<<8
+                | EC_RAM_READ(BAT1_Info[FAN1_Current_RPM].InfoAddr_L);
         BAT1_Info[FAN1_Current_RPM].InfoInt = tmpvalue;
         sprintf(BAT1_Info[FAN1_Current_RPM].InfoValue, "%-8d ",BAT1_Info[FAN1_Current_RPM].InfoInt);
     }
@@ -1232,18 +883,12 @@ void PollFanInfo(void)
 		targetrpm = get_fan_targetrpm(0);
 		BAT1_Info[FAN1_Goal_RPM].InfoInt = targetrpm;
 		sprintf(BAT1_Info[FAN1_Goal_RPM].InfoValue, "%-8d ",BAT1_Info[FAN1_Goal_RPM].InfoInt);
-    }/*
-    if(BAT1_Info[FAN1_RPM_Level].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[FAN1_RPM_Level].InfoAddr_L);
-        BAT1_Info[FAN1_RPM_Level].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[FAN1_RPM_Level].InfoValue, "%-8d ",BAT1_Info[FAN1_RPM_Level].InfoInt);
-    }*/
+    }
     
     if(BAT1_Info[FAN2_Current_RPM].Active)
     {
-        tmpvalue = EC_ReadByte_PM(BAT1_Info[FAN2_Current_RPM].InfoAddr_H)<<8
-                | EC_ReadByte_PM(BAT1_Info[FAN2_Current_RPM].InfoAddr_L);
+        tmpvalue = EC_RAM_READ(BAT1_Info[FAN2_Current_RPM].InfoAddr_H)<<8
+                | EC_RAM_READ(BAT1_Info[FAN2_Current_RPM].InfoAddr_L);
         BAT1_Info[FAN2_Current_RPM].InfoInt = tmpvalue;
         sprintf(BAT1_Info[FAN2_Current_RPM].InfoValue, "%-8d ",BAT1_Info[FAN2_Current_RPM].InfoInt);
     }
@@ -1252,13 +897,7 @@ void PollFanInfo(void)
         targetrpm = get_fan_targetrpm(1);
         BAT1_Info[FAN2_Goal_RPM].InfoInt = targetrpm;
         sprintf(BAT1_Info[FAN2_Goal_RPM].InfoValue, "%-8d ",BAT1_Info[FAN2_Goal_RPM].InfoInt);
-    }/*
-    if(BAT1_Info[FAN2_RPM_Level].Active)
-    {
-        tmpvalue = EC_RAM_READ(BAT1_Info[FAN2_RPM_Level].InfoAddr_L);
-        BAT1_Info[FAN2_RPM_Level].InfoInt = tmpvalue;
-        sprintf(BAT1_Info[FAN2_RPM_Level].InfoValue, "%-8d ",BAT1_Info[FAN2_RPM_Level].InfoInt);
-    }*/
+    }
 }
 
 void Key_Manage()
@@ -1346,7 +985,7 @@ int main(int argc, char *argv[])
     ToolInit();
     PollFanInfo();
     
-    //---------------------------------------Creat log file---------------------------------------------
+    //---------------------------------------Creat log file---------------------
     if(BAT_LogFile_flag)
     {
         time_t t = time(0);
@@ -1373,7 +1012,7 @@ int main(int argc, char *argv[])
         fprintf(BAT_LogFile, "\n");
         fflush(BAT_LogFile);
     }
-//--------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
     
     while(ESC!=Key_Value)
     {
