@@ -3584,7 +3584,10 @@ int cmd_temperature(int argc, char *argv[])
 			case EC_TEMP_SENSOR_NOT_PRESENT:
 				break;
 			case EC_TEMP_SENSOR_ERROR:
-				fprintf(stderr, "Sensor %d error\n", id);
+				p.id = id;
+				ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
+						&p, sizeof(p), &r, sizeof(r));
+				printf("set %s=0\n", r.sensor_name);
 				break;
 			case EC_TEMP_SENSOR_NOT_POWERED:
 				fprintf(stderr, "Sensor %d disabled\n", id);
@@ -3622,7 +3625,10 @@ int cmd_temperature(int argc, char *argv[])
 		printf("Sensor not present\n");
 		return -1;
 	case EC_TEMP_SENSOR_ERROR:
-		printf("Error\n");
+		p.id = id;
+		ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
+				&p, sizeof(p), &r, sizeof(r));
+		printf("set %s=0\n", r.sensor_name);
 		return -1;
 	case EC_TEMP_SENSOR_NOT_POWERED:
 		printf("Sensor disabled/unpowered\n");
