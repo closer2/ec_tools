@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.3"
+#define TOOLS_VER   "V2.4"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.3
+// ectool Version : 2.4
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -1416,10 +1416,10 @@ static int print_fan(int idx)
 	case EC_FAN_SPEED_NOT_PRESENT:
 		return -1;
 	case EC_FAN_SPEED_STALLED:
-		printf("Fan %d stalled!\n", idx);
+		printf("set Fan%d_Current_RPM=stalled\n", idx+1);
 		break;
 	default:
-		printf("Fan %d RPM: %d\n", idx, rv);
+		printf("set Fan%d_Current_RPM=%d\n", idx+1, rv);
 		break;
 	}
 
