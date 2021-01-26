@@ -3576,7 +3576,6 @@ int cmd_temperature(int argc, char *argv[])
 
 	if (strcmp(argv[1], "all") == 0)
     {
-        printf(" Thermal Sensor list :\n");
 		for (id = 0;
 		     id < EC_TEMP_SENSOR_ENTRIES;
 		     id++) {
@@ -3598,7 +3597,7 @@ int cmd_temperature(int argc, char *argv[])
 				p.id = id;
 				ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
 						&p, sizeof(p), &r, sizeof(r));
-				printf(" %s: \t%d(C)\n", r.sensor_name, rv);
+				printf("set %s=%d\n", r.sensor_name, rv);
 			}
 		}
 		return 0;
@@ -3635,7 +3634,7 @@ int cmd_temperature(int argc, char *argv[])
 		p.id = id;
 		ec_command(EC_CMD_TEMP_SENSOR_GET_INFO, 0,
 				&p, sizeof(p), &r, sizeof(r));
-		printf(" %s: \t%d(C)\n", r.sensor_name, rv);
+		printf("set %s=%d\n", r.sensor_name, rv);
 		return 0;
 	}
 }
