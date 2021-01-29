@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.4"
+#define TOOLS_VER   "V2.6"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.4
+// ectool Version : 2.6
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -1425,10 +1425,10 @@ static int print_fan(int idx)
 	case EC_FAN_SPEED_NOT_PRESENT:
 		return -1;
 	case EC_FAN_SPEED_STALLED:
-		printf("set Fan%d_Current_RPM=stalled\n", idx+1);
+		printf("set Fan%d_Current_RPM=stalled\n", idx);
 		break;
 	default:
-		printf("set Fan%d_Current_RPM=%d\n", idx+1, rv);
+		printf("set Fan%d_Current_RPM=%d\n", idx, rv);
 		break;
 	}
 
@@ -2836,7 +2836,7 @@ int cmd_ODM_version(int argc, char *argv[])
 		return -1;
 	}
 
-	if (argc == 2 && !strcmp(argv[1], "help"))
+	if (2 == argc && !strcmp(argv[1], "help"))
 	{
 		printf("------------------------------------------------------------------------\n");
 		printf("*	ODM EC version define\n");
@@ -2849,12 +2849,16 @@ int cmd_ODM_version(int argc, char *argv[])
 		printf("*	BLD_EC_VERSION_TEST :\n");
 		printf("*			 EC test version for ODM debug\n");
 		printf("------------------------------------------------------------------------\n\n");
+
+		printf("BLD_EC_VERSION_X : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_X));
+		printf("BLD_EC_VERSION_YZ : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
+		printf("BLD_EC_VERSION_TEST : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_TEST));
 	}
-
-	printf("BLD_EC_VERSION_X : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_X));
-	printf("BLD_EC_VERSION_YZ : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
-	printf("BLD_EC_VERSION_TEST : %d\n", read_mapped_mem8(EC_MEMMAP_VERSION_TEST));
-
+	else if(1 == argc)
+	{
+		printf("set EC_Version=%03d\n", read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
+	}
+	
 	return 0;
 }
 
