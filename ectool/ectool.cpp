@@ -772,7 +772,7 @@ log_info_struct shutdown_case_list[]=
 
 	{0x20,	"PMIC reset by voltage regulator fault(PMIC reset IRQ)"},
 	{0x21,	"PMIC reset by power button counter (PMIC reset IRQ)"},
-	{0x2E,	"Caterr  low trig Shutdown"},
+	{0x2E,	"Caterr# low trig Shutdown"},
 	
 	{0x30,	"CPU too hot(PECI)"},
 	{0x31,	"CPU too hot(Thermistor: CPU)"},
@@ -783,8 +783,8 @@ log_info_struct shutdown_case_list[]=
 	{0x36,	"DCJ too hot(Thermistor: DC Jack)"},
 	{0x37,	"Ambient too hot(Thermistor: Ambient)"},
 	{0x38,	"SSD too hot(Thermistor:SSD)"},
-	{0x39,	"Battery too Hot"},
-	{0x3A,	"Charger too Hot"},
+	{0x39,	"39"},
+	{0x3A,	"3A"},
 
 	{0x40,	"Power button pressed"},
 	{0x41,	"Power button released"},
@@ -794,6 +794,7 @@ log_info_struct shutdown_case_list[]=
 	{0x45,	"SYSTEM_ALW_PG fail"},
 	{0x46,	"PSON# 12V fail"},
 	{0x47,	"all core fail"},
+	{0x48,	"shutdown WDT triggers SMI blue screen"},
 	
 	{0xD0,	"BIOS/OS WDT"},
 	{0xD1,	"BIOS bootbloack fail"},
@@ -1225,17 +1226,27 @@ void sort_raw_log_linklist(LogNode *raw)
 void analysis_seq_linklist(LogNode *ptr)
 {
 	char date[32];
+	uint16_t id;
+	uint16_t exc_code;
+	
 	while(ptr)
 	{
+		// get shutdown id and exception code
+		id = ptr->log_id;
+		exc_code = ptr->log_id >> 16;
+	
 		//analysis data
 		sec_to_date(ptr->sec, date);
 		analysis_data(date);
-		fprintf(txtFile, "[%s] : ID=[%02X], ", date, ptr->log_id);
+		fprintf(txtFile, "[%s] : ID=[%02X], ", date, id);
+
+		// exception: 1-abnormal code, 0-normal code
+		fprintf(txtFile, "%s: ", exc_code ? "abnormal" : "normal");
 
 		//analysis log
 		if(1 == ptr->flag)
 		{
-			if( analysis_log_info(shutdown_case_head, ptr->log_id, txtFile) == 0)
+			if( analysis_log_info(shutdown_case_head, id, txtFile) == 0)
 			{}
 			else
 			{
@@ -1245,7 +1256,7 @@ void analysis_seq_linklist(LogNode *ptr)
 
 		if(0 == ptr->flag)
 		{
-			if( analysis_log_info(wakeup_case_head, ptr->log_id, txtFile) == 0)
+			if( analysis_log_info(wakeup_case_head, id, txtFile) == 0)
 			{}
 			else
 			{
@@ -2532,7 +2543,7 @@ int cmd_log_info(int argc, char *argv[])
 		printf("Creat default LogInfo.txt file Fail\n\n");
 		return -1;
 	}
-	
+
 	analysis_seq_linklist(seq_log_head);
 	
 	fclose(txtFile);
@@ -2630,6 +2641,8 @@ int cmd_analysis_log(int argc, char *argv[])
 	char date[32];
 	uint32_t buf[2048];
 	char log_txt[64];
+	uint16_t id;
+	uint16_t exc_code;
 
 	if (argc != 2)
 	{
@@ -2670,13 +2683,20 @@ int cmd_analysis_log(int argc, char *argv[])
    		if(0xffffffff == buf[i])
 			break;
 
+		// get shutdown id and exception code
+		id = buf[i];
+		exc_code = buf[i] >> 16;
+		
         // date and time
     	sec_to_date(buf[i+1], date);
 		analysis_data(date);
-		fprintf(SDTxtFile, "[%s] : ID=[%02X], ", date, buf[i]);
+		fprintf(SDTxtFile, "[%s] : ID=[%02X], ", date, id);
+
+		// exception: 1-abnormal code, 0-normal code
+		fprintf(SDTxtFile, "%s: ", exc_code ? "abnormal" : "normal");
 
         // shutdown cause
-		if( analysis_log_info(shutdown_case_head, buf[i], SDTxtFile) )
+		if( analysis_log_info(shutdown_case_head, id, SDTxtFile) )
 		{
 			fprintf(SDTxtFile, "unkonw log id\n");
 		}
@@ -2708,13 +2728,20 @@ int cmd_analysis_log(int argc, char *argv[])
 		if(0xffffffff == buf[i])
 			break;
 
+		// get wakeup id and exception code
+		id = buf[i];
+		exc_code = buf[i] >> 16;
+
         // date and time
     	sec_to_date(buf[i+1], date);
 		analysis_data(date);
-		fprintf(WUTxtFile, "[%s] : ID=[%02X], ", date, buf[i]);
+		fprintf(WUTxtFile, "[%s] : ID=[%02X], ", date, id);
+
+		// exception: 1-abnormal code, 0-normal code
+		fprintf(WUTxtFile, "%s: ", exc_code ? "abnormal" : "normal");
 
         // wakeup cause
-		if( analysis_log_info(wakeup_case_head, buf[i], WUTxtFile) )
+		if( analysis_log_info(wakeup_case_head, id, WUTxtFile) )
 		{
 			fprintf(WUTxtFile, "unkonw log id\n");
 		}
