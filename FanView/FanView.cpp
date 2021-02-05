@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V2.1"
+#define  TOOLS_VER   "V2.2"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -580,7 +580,21 @@ typedef enum InfoNameEnum
     FAN2_Goal_RPM,
     //FAN2_RPM_Level,
     //FAN2_Set_RPM,
-    
+
+	Temp_Sensor1_Avg,
+	Temp_Sensor2_Avg,
+	Temp_Sensor3_Avg,
+	Temp_Sensor4_Avg,
+	Temp_Sensor5_Avg,
+	Temp_Sensor6_Avg,
+	Temp_Sensor7_Avg,
+	Temp_Sensor8_Avg,
+	Temp_Sensor9_Avg,
+	Temp_Sensor10_Avg,
+	Temp_Sensor11_Avg,
+	Temp_Sensor12_Avg,
+	Temp_Sensor13_Avg,
+	
     INFONAMECOUNT         // count items and index it
 }InfoNameEnum;
 
@@ -589,12 +603,12 @@ EC_BatteryInfo BAT1_Info[] =
 {
     {"EC_Version          :", "N/A", "N/A", 0x00,     0, 0, TRUE, FALSE},
     
-    {"Temp_Sensor1        :", "N/A", "N/A", 0x20,     0, 0, TRUE, TRUE},
-    {"Temp_Sensor2        :", "N/A", "N/A", 0x21,     0, 0, TRUE, TRUE},
-    {"Temp_Sensor3        :", "N/A", "N/A", 0x22,     0, 0, TRUE, TRUE},
-    {"Temp_Sensor4        :", "N/A", "N/A", 0x23,     0, 0, TRUE, TRUE},
-    {"Temp_Sensor5        :", "N/A", "N/A", 0x24,     0, 0, TRUE, TRUE},
-    {"Temp_Sensor6        :", "N/A", "N/A", 0x25,     0, 0, TRUE, TRUE},
+    {"Temp_Sensor1        :", "N/A", "N/A", 0x20,     0, 0, TRUE, FALSE},
+    {"Temp_Sensor2        :", "N/A", "N/A", 0x21,     0, 0, TRUE, FALSE},
+    {"Temp_Sensor3        :", "N/A", "N/A", 0x22,     0, 0, TRUE, FALSE},
+    {"Temp_Sensor4        :", "N/A", "N/A", 0x23,     0, 0, TRUE, FALSE},
+    {"Temp_Sensor5        :", "N/A", "N/A", 0x24,     0, 0, TRUE, FALSE},
+    {"Temp_Sensor6        :", "N/A", "N/A", 0x25,     0, 0, TRUE, FALSE},
     {"Temp_Sensor7        :", "N/A", "N/A", 0x26,     0, 0, TRUE, FALSE},
     {"Temp_Sensor8        :", "N/A", "N/A", 0x27,     0, 0, TRUE, FALSE},
     {"Temp_Sensor9        :", "N/A", "N/A", 0x28,     0, 0, TRUE, FALSE},
@@ -603,15 +617,29 @@ EC_BatteryInfo BAT1_Info[] =
     {"Temp_Sensor12       :", "N/A", "N/A", 0x2b,     0, 0, TRUE, FALSE},
     {"Temp_Sensor13       :", "N/A", "N/A", 0x2c,     0, 0, TRUE, FALSE},
     
-    {"FAN1_Current_RPM    :", "N/A", "N/A", 0x57,   0x56, 0, TRUE, TRUE},
-    {"FAN1_Goal_RPM       :", "N/A", "N/A", 0x462,     0, 0, TRUE, TRUE},
+    {"FAN1_Current_RPM    :", "N/A", "N/A", 0x57,   0x56, 0, TRUE, FALSE},
+    {"FAN1_Goal_RPM       :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
     //{"FAN1_RPM_Level      :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
     //{"FAN1_Set_RPM        :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
     
-    {"FAN2_Current_RPM    :", "N/A", "N/A", 0x59,   0x58, 0, TRUE, TRUE},
-    {"FAN2_Goal_RPM       :", "N/A", "N/A", 0x462,     0, 0, TRUE, TRUE},
+    {"FAN2_Current_RPM    :", "N/A", "N/A", 0x59,   0x58, 0, TRUE, FALSE},
+    {"FAN2_Goal_RPM       :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
     //{"FAN2_RPM_Level      :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
     //{"FAN2_Set_RPM        :", "N/A", "N/A", 0x462,     0, 0, TRUE, FALSE},
+
+	{"Temp_Sensor1_Avg    :", "N/A", "N/A", 0x2d,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor2_Avg    :", "N/A", "N/A", 0x2e,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor3_Avg    :", "N/A", "N/A", 0x2f,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor4_Avg    :", "N/A", "N/A", 0x30,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor5_Avg    :", "N/A", "N/A", 0x31,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor6_Avg    :", "N/A", "N/A", 0x32,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor7_Avg    :", "N/A", "N/A", 0x33,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor8_Avg    :", "N/A", "N/A", 0x34,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor9_Avg    :", "N/A", "N/A", 0x35,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor10_Avg   :", "N/A", "N/A", 0x36,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor11_Avg   :", "N/A", "N/A", 0x37,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor12_Avg   :", "N/A", "N/A", 0x38,     0, 0, TRUE, FALSE},
+	{"Temp_Sensor13_Avg   :", "N/A", "N/A", 0x39,     0, 0, TRUE, FALSE},
     
     {0, 0, 0, 0, 0, 0}   // end
 };
@@ -913,6 +941,87 @@ void PollFanInfo(void)
         BAT1_Info[FAN2_Goal_RPM].InfoInt = targetrpm;
         sprintf(BAT1_Info[FAN2_Goal_RPM].InfoValue, "%-8d ",BAT1_Info[FAN2_Goal_RPM].InfoInt);
     }
+
+	/* sensor avgs */
+	if(BAT1_Info[Temp_Sensor1_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor1_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor1_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor1_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor1_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor2_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor2_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor2_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor2_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor2_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor3_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor3_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor3_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor3_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor3_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor4_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor4_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor4_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor4_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor4_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor5_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor5_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor5_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor5_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor5_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor6_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor6_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor6_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor6_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor6_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor7_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor7_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor7_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor7_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor7_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor8_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor8_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor8_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor8_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor8_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor9_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor9_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor9_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor9_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor9_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor10_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor10_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor10_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor10_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor10_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor11_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor11_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor11_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor11_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor11_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor12_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor12_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor12_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor12_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor12_Avg].InfoInt);
+    }
+	if(BAT1_Info[Temp_Sensor13_Avg].Active)
+    {
+        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor13_Avg].InfoAddr_L);
+        BAT1_Info[Temp_Sensor13_Avg].InfoInt = tmpvalue;
+        sprintf(BAT1_Info[Temp_Sensor13_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor13_Avg].InfoInt);
+    }
+	
 }
 
 void Key_Manage()
