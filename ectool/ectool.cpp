@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.6"
+#define TOOLS_VER   "V2.7"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.6
+// ectool Version : 2.7
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -2883,7 +2883,8 @@ int cmd_ODM_version(int argc, char *argv[])
 	}
 	else if(1 == argc)
 	{
-		printf("set EC_Version=%03d\n", read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
+		printf("set EC_Version=%01x%02x\n", read_mapped_mem8(EC_MEMMAP_VERSION_X),
+			read_mapped_mem8(EC_MEMMAP_VERSION_YZ));
 	}
 	
 	return 0;
