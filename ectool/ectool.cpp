@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.7"
+#define TOOLS_VER   "V2.8"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.7
+// ectool Version : 2.8
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -137,6 +137,7 @@ uint8_t Read_data_from_PM(void)
     READ_PORT(PM_DATA_PORT62, data);
     return(data);
 }
+
 //--------------write EC RAM-----------------------------------/
 void EC_WriteByte_PM(uint8_t index, uint8_t data)
 {
@@ -144,6 +145,7 @@ void EC_WriteByte_PM(uint8_t index, uint8_t data)
     Send_data_by_PM(index);
     Send_data_by_PM(data);
 }
+
 //--------------read EC RAM------------------------------------/
 uint8_t EC_ReadByte_PM(uint8_t index)
 {
@@ -153,6 +155,15 @@ uint8_t EC_ReadByte_PM(uint8_t index)
     data = Read_data_from_PM();
     return data;
 }
+
+//--------------send bios command------------------------------/
+void send_bios_cmd(uint8_t cmd, uint8_t data)
+{
+	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, data);
+	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD_VERIFY, 0xFF-cmd);
+	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, cmd);
+}
+
 //==============================================================================
 
 
@@ -2224,13 +2235,11 @@ int cmd_g3_ctrl(int argc, char *argv[])
 	}
 	else if(!strcmp("disable", argv[1]))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);	/* disable */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x03);		/* system G3 control */
+		send_bios_cmd(0x03, 0x01);		/* disable g3 */
 	}
 	else if(!strcmp("enable", argv[1]))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x00);	/* enable */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x03);		/* system G3 control */
+		send_bios_cmd(0x03, 0x00);		/* enable g3*/
 	}
 	else
 	{
@@ -2838,8 +2847,7 @@ int cmd_mfg_mode(int argc, char *argv[])
 
 	if(!strcmp(argv[1], "disable"))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x0E);
+		send_bios_cmd(0x0E, 0x02);		/* disable mfgmode */
 	}
 	else
 	{
@@ -3548,13 +3556,11 @@ int cmd_power_led(int argc, char *argv[])
 	
 	if(!strcmp("on", argv[1]))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);	/* on */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x06);	/* power LED control */
+		send_bios_cmd(0x06, 0x01);		/* power LED on */
 	}
 	else if(!strcmp("off", argv[1]))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);	/* off */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x06);	/* power LED control */
+		send_bios_cmd(0x06, 0x02);		/* power LED off */
 	}
 
 	if(read_mapped_mem8(EC_MEMMAP_BIOS_CMD_STATUS) == 0xff)
