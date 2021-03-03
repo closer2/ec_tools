@@ -4560,7 +4560,7 @@ const char help_str[] =
 	"      Prints the last output to the EC debug console\n"
 	"  coldboot <cycle> <time>\n"
 	"      Requests that the EC will automatically start the AP the next time\n"
-	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
+	"      when enter the S5/S3 power state. default cycle is 1, time is 30sec.\n"
     "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
 	"  ecbackup <filename>\n"
