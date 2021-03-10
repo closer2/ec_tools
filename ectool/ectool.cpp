@@ -1,8 +1,8 @@
-#define TOOLS_VER   "V2.8"
+#define TOOLS_VER   "V2.9"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
-// ectool Version : 2.8
+// ectool Version : 2.9
 // 1. First Release
 //	a. mfgmode <disable>
 //	b. powerled <on | off>
@@ -1738,6 +1738,45 @@ int cmd_fingerprint(int argc, char *argv[])
 		printf("switched to MCU.");
 		
 	return 0;
+}
+
+int cmd_pwrbtn_test(int argc, char *argv[])
+{
+	struct ec_params_powerbtn_Test p;
+	struct ec_response_powerbtn_Test r;
+	int rv;
+
+	if (argc != 2)
+	{
+		fprintf(stderr, "Usage: %s <clear | read>\n", argv[0]);
+		fprintf(stderr, "clear: clear flag\n");
+		fprintf(stderr, "read: read flag\n");
+		return -1;
+	}
+
+	if(!strcmp("clear", argv[1]))
+		p.role = 0x01;
+	else if(!strcmp("read", argv[1]))
+		p.role = 0x02;
+	else
+	{
+		fprintf(stderr, "Usage: %s <clear | read>\n", argv[0]);
+		fprintf(stderr, "clear: clear flag\n");
+		fprintf(stderr, "read: read flag\n");
+		return -1;
+	}
+	
+	rv = ec_command(EC_CMD_POWERBTN_TEST, 0,
+				&p, sizeof(p), &r, sizeof(r));
+	if (rv < 0)
+		return rv;
+
+	if(0x02 == p.role)
+		printf("flag=%x\n", r.role);
+	else if (0x01 == p.role)
+		printf("clear flag success!\n");
+		
+	return 0;	
 }
 
 int is_string_printable(const char *buf)
@@ -4485,6 +4524,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"pdcontrol", cmd_pd_control},
 	//{"pdchipinfo", cmd_pd_chip_info},
 	//{"pdwritelog", cmd_pd_write_log},
+	{"pwrbtnflag", cmd_pwrbtn_test},
 	{"pwrbtnstart", cmd_pwrbtn_test_start},
 	{"pwrbtnend", cmd_pwrbtn_test_end},
 	{"powerinfo", cmd_power_info},
@@ -4599,6 +4639,8 @@ const char help_str[] =
 	"      read MFG mode status or disable MFG mode\n"
 	"  odmversion\n"
 	"      read ODM EC version\n"
+	"  pwrbtnflag <clear | read>\n"
+	"      clear/read powerbtn test flag\n"
 	"  pwrbtnstart\n"
 	"      detect power button rising and falling count start"
 	"  pwrbtnend\n"
