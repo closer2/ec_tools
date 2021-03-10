@@ -1730,7 +1730,7 @@ int cmd_fingerprint(int argc, char *argv[])
 	if (rv < 0)
 		return rv;
 
-	if(0xaa == r.role)
+	if(0xff == r.role)
 		printf("switch success!");
 	else if (1 == r.role)
 		printf("switched to CPU.");
