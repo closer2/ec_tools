@@ -507,6 +507,40 @@ static int ec_command_lpc_3(int command, int version,
     return rs.data_len;
 }
 
+int comm_init_lpc(void)
+{
+	/*
+	* Test if LPC command args are supported.
+	*
+	* The cheapest way to do this is by looking for the memory-mapped
+	* flag.  This is faster than sending a new-style 'hello' command and
+	* seeing whether the EC sets the EC_HOST_ARGS_FLAG_FROM_HOST flag
+	* in args when it responds.
+	*/
+
+	/*
+	* We have modified the EC ACPI RAM definition.
+	* Therefore, the "EC" character cannot be checked.
+	*  Morgen@2021/01/02
+	* */
+#if 0
+	if (inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID) != 'E' ||
+	  inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID + 1) != 'C') {
+	  fprintf(stderr, "Missing Chromium EC memory map.\n");
+	  return -5;
+	}
+#endif
+
+	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
+		sizeof(struct ec_host_request);
+	ec_max_insize = EC_LPC_HOST_PACKET_SIZE -
+		sizeof(struct ec_host_response);
+
+	ec_outbuf = malloc(ec_max_outsize);
+	ec_inbuf = malloc(ec_max_insize);
+
+	return 0;
+}
 
 #if 0
 uint32_t get_fan_targetrpm(uint8_t index)
@@ -594,7 +628,7 @@ int do_i2c_xfer(unsigned int port, unsigned int addr,
 #define HC32F460_REG_FLASHADDR_0x03 0x03
 
 
-int hc32f460_i2c_read(uint8_t reg, uint8_t *read_buf, int read_len)
+int hc32f460_i2c_read(uint8_t reg, uint8_t **read_buf, int read_len)
 {
     int rv;
 
@@ -605,7 +639,7 @@ int hc32f460_i2c_read(uint8_t reg, uint8_t *read_buf, int read_len)
     }
     
     rv = do_i2c_xfer(HC32F460_I2C_PORT, HC32F460_I2C_ADDR,
-                        &reg, 1, &read_buf, read_len);
+                        &reg, 1, read_buf, read_len);
 
     if (rv < 0)
         return rv;
@@ -649,9 +683,9 @@ int data_LRC(void)
 void read_hc32f460_version(void)
 {
     int rv;
-    uint8_t read_buf[256];
+    uint8_t *read_buf;
     
-    rv = hc32f460_i2c_read(HC32F460_REG_VER_0x01, read_buf, (4+64+1));
+    rv = hc32f460_i2c_read(HC32F460_REG_VER_0x01, &read_buf, (4+64+1));
 
     if (0 == rv)
         printf("HC32F460_Ver=%X-%X\n", read_buf[4], read_buf[5]);
@@ -668,19 +702,14 @@ int main(int argc, char *argv[])
     IOInitOK = InitializeWinIo();
     if(IOInitOK)
     {
-        SetTextColor(EFI_LIGHTGREEN, EFI_BLACK);
         printf("WinIo OK\n");
     }
     else
     {
-        SetTextColor(EFI_LIGHTRED, EFI_BLACK);
         printf("Error during initialization of WinIo\n");
         goto IOError;
     }
     
-    SetTextColor(EFI_WHITE, EFI_BLACK);
-    system("cls");
-
     read_hc32f460_version();
 
     goto end;
