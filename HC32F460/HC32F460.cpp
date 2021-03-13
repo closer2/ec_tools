@@ -627,12 +627,16 @@ int do_i2c_xfer(unsigned int port, unsigned int addr,
 #define CMD_ID_UpdateContinue       0x22
 #define CMD_ID_UpdateEnd            0x23
 
+#define ONCES_READ_SIZE             112
+
 FILE *binaryFile = NULL;
-static uint32_t bin_size = 0;
+static uint32_t binSize = 0;
 static uint32_t dataSize = 0;
 static uint32_t startAddress = 0;
-static uint8_t hc32f460_status = 0x66;
 
+static uint8_t mainVersion = 0x00;
+static uint8_t subVersion = 0x00;
+static uint8_t hc32f460Status = 0xff;
 
 typedef struct _IIC_HEAD{
 	uint8_t seq;
@@ -654,21 +658,6 @@ typedef struct _DATA_PACKET_STR{
 }DATA_PACKET_STR;
 
 
-uint8_t GetLRC(uint8_t *dataBuf,int size)
-{
-    uint8_t q = 0;
-    uint8_t s = 0;
-	int i = 0;
-	
-    for (i = 0; i < size; i++)
-    {
-        q = q + dataBuf[i];
-        s = s + q;
-    }
-	
-    return s;
-}
-
 uint8_t SumCrc(uint8_t *data, uint16_t lenth)
 {
     uint8_t sum = 0;
@@ -682,31 +671,36 @@ uint8_t SumCrc(uint8_t *data, uint16_t lenth)
     return sum;    
 }
 
-void get_update_bin_size()
+uint8_t get_firmware_size(char *filename)
 {
+	if((binaryFile = fopen(filename, "r")) == NULL)
+	{
+		printf("%s not exist\n\n", filename);
+		return -1;
+	}
+
 	fseek(binaryFile, 0, SEEK_END);
-	bin_size = ftell(binaryFile);
-	printf("bin_size = %ld Byte\n", bin_size);
+	binSize = ftell(binaryFile);
+	printf("binSize = %ld Byte\n", binSize);
+
+	return 0;
 }
 
-void read_update_bin(uint8_t *data)
+void load_firmware_to_buf(uint8_t *data)
 {
-	if(bin_size - startAddress < 100)
+	if(binSize - startAddress < ONCES_READ_SIZE)
 	{
-		dataSize = bin_size - startAddress;
-		fseek(binaryFile, startAddress, SEEK_SET);
-		fread(data, 1, dataSize, binaryFile);
-		startAddress+=dataSize;
+		dataSize = binSize - startAddress;
 	}
-	else if(bin_size - startAddress >= 100)
+	else
 	{
-		dataSize = 100;
-		fseek(binaryFile, startAddress, SEEK_SET);
-		fread(data, 1, dataSize, binaryFile);
-		startAddress+=dataSize;
+		dataSize = ONCES_READ_SIZE;
 	}
+	
+	fseek(binaryFile, startAddress, SEEK_SET);
+	fread(data, 1, dataSize, binaryFile);
+	startAddress+=dataSize;
 }
-
 
 uint16_t Upgrade_Data_Code(uint8_t cmd, uint8_t *buffer)
 {
@@ -742,7 +736,7 @@ uint16_t Upgrade_Data_Code(uint8_t cmd, uint8_t *buffer)
 		break;
       
     case CMD_ID_UpdateContinue:
-		if(startAddress <= bin_size)
+		if(startAddress <= binSize)
 		{
 			strData->head.seq = prev_seq++;
 			strData->head.tag = cmd;
@@ -752,7 +746,7 @@ uint16_t Upgrade_Data_Code(uint8_t cmd, uint8_t *buffer)
 			strData->data[i++] = (startAddress>>16);
 			strData->data[i++] = (startAddress>>24);
 
-			read_update_bin(&strData->data[i]);
+			load_firmware_to_buf(&strData->data[i+4]);
 
 			strData->data[i++] = dataSize;
 			strData->data[i++] = (dataSize>>8);
@@ -843,7 +837,8 @@ void read_hc32f460_version(void)
 
     if (0 == rv)
     {
-        printf("HC32F460_Ver = %02x%02x\n\n", read_buf[8], read_buf[9]);
+		mainVersion = read_buf[8];
+		subVersion = read_buf[9];
     }
     else
         printf("HC32F460_Ver = error\n");
@@ -859,49 +854,23 @@ void read_hc32f460_status(void)
 
     if (0 == rv)
     {
-    	hc32f460_status = read_buf[4];
-        //printf("HC32F460_Sta = %02x\n\n", read_buf[4]);
+    	hc32f460Status = read_buf[4];
     }
     else
         printf("HC32F460_Sta = error\n");
 }
 
-int hc32f460_update_status()
+int hc32f460_update_start(void)
 {
-	uint8_t write_buf[128] = {0};
+	uint8_t write_buf[128];
 	int write_len;
 	int rv;
-	uint8_t status;
-
-	printf("Package data...\n");
-	write_len = Upgrade_Data_Code(CMD_ID_ReadSysSts, write_buf);
-	printf("Package Done\nwrite_len = %d\n", write_len);
-
-	rv = hc32f460_i2c_write(HC32F460_REG_STATUS_0x02, write_buf, write_len);
-	if(rv < 0)
-	{
-		printf("CMD_ID_ReadSysSts = failed!\n\n");
-		return rv;
-	}
-	else
-	{
-		printf("CMD_ID_ReadSysSts = success!\n\n");
-		return 0;
-	}
-}
-
-int hc32f460_update_start()
-{
-	uint8_t write_buf[128] = {0};
-	int write_len;
-	int rv;
-	uint8_t status;
 
 	printf("Package data...\n");
 	write_len = Upgrade_Data_Code(CMD_ID_UpdateStart, write_buf);
 	printf("Package Done\nwrite_len = %d\n", write_len);
 	
-	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf,write_len);
+	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf, write_len);
 	if(rv < 0)
 	{
 		printf("CMD_ID_UpdateStart = failed!\n\n");
@@ -914,19 +883,17 @@ int hc32f460_update_start()
 	}
 }
 
-int hc32f460_update_end()
+int hc32f460_update_end(void)
 {
-	uint8_t write_buf[128] = {0};
+	uint8_t write_buf[128];
 	int write_len;
 	int rv;
-	uint8_t status;
 
-	memset(write_buf, 0, 128);
 	printf("Package data...\n");
 	write_len = Upgrade_Data_Code(CMD_ID_UpdateEnd, write_buf);
 	printf("Package Done\nwrite_len = %d\n", write_len);
 
-	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf,write_len);
+	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf, write_len);
 	if(rv < 0)
 	{
 		printf("CMD_ID_UpdateEnd = failed!\n\n");
@@ -939,23 +906,25 @@ int hc32f460_update_end()
 	}
 }
 
-int hc32f460_update_continue()
+int hc32f460_update_continue(void)
 {
-	uint8_t write_buf[128] = {0};
+	uint8_t write_buf[128];
 	int write_len;
 	int rv;
 	
-	while(startAddress < bin_size)
+	while(startAddress < binSize)
 	{
 		read_hc32f460_status();
-		printf("hc32f460_status = %02x----\n", hc32f460_status);
+		printf("--- hc32f460Status = %02x\n", hc32f460Status);
 		
-		if(0x30 == hc32f460_status)
+		if(0x30 == hc32f460Status)
 		{
 			_sleep(20);
 			continue;
 		}
-		else if(0x01 == hc32f460_status || 0x02 == hc32f460_status || 0x03 == hc32f460_status || 0x10 == hc32f460_status || 0x11 == hc32f460_status)
+		else if(0x01 == hc32f460Status || 0x02 == hc32f460Status 
+			 || 0x03 == hc32f460Status || 0x10 == hc32f460Status 
+			 || 0x11 == hc32f460Status)
 			return -1;
 	
 		memset(write_buf, 0, 128);
@@ -982,46 +951,22 @@ int hc32f460_update_continue()
 	return 0;
 }
 
-int my_hc32f460_update(char *filename)
+int my_hc32f460_update(void)
 {
 	int rv;
-	uint8_t status;
 	
-	read_hc32f460_version();
-
-	read_hc32f460_status();
-	printf("hc32f460_status = %02x\n\n", hc32f460_status);
-	
-	
-	/************ CMD_ID_UpdateStart **********/
 	rv = hc32f460_update_start();
 	if(rv < 0)
 		return rv;
 	_sleep(1800);
 	
-	/*********** CMD_ID_UpdateContinue ************/
-	if((binaryFile = fopen(filename, "r")) == NULL)
-	{
-		printf("%s not exist\n\n", filename);
-		return -1;
-	}
-
-	get_update_bin_size();
-	
 	rv = hc32f460_update_continue();
 	if(rv < 0)
 		return rv;
 
-	/************* CMD_ID_UpdateEnd **************/
 	rv = hc32f460_update_end();
 	if(rv < 0)
 		return rv;
-	
-	_sleep(9000);
-
-	read_hc32f460_version();
-	read_hc32f460_status();
-	printf("hc32f460_status = %02x\n\n", hc32f460_status);
 
 	return 0;
 }
@@ -1047,9 +992,28 @@ int main(int argc, char *argv[])
     /* Init lpc */
     comm_init_lpc();
 
+	read_hc32f460_version();
+	read_hc32f460_status();
+	printf("hc32f460Status = %02x\n\n", hc32f460Status);
 
-	my_hc32f460_update(argv[1]);
+	rv = get_firmware_size(argv[1]);
+	if(rv < 0)
+	{
+		printf("get firmware size failed!\n");
+		goto end;
+	}
 
+	rv = my_hc32f460_update();
+	if(rv < 0)
+	{
+		printf("update hc32f460 firmware failed!\n");
+		goto end;
+	}
+		
+	_sleep(9000);
+	read_hc32f460_version();
+	read_hc32f460_status();
+	printf("hc32f460Status = %02x\n\n", hc32f460Status);
 
     goto end;
 
