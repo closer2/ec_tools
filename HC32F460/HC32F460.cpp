@@ -743,7 +743,6 @@ uint16_t Upgrade_Data_Code(uint8_t cmd, uint8_t *buffer)
 			strData->data[i++] = (startAddress>>24);
 
 			load_firmware_to_buf(&strData->data[i+4]);
-			printf("\n");
 
 			strData->data[i++] = dataSize;
 			strData->data[i++] = (dataSize>>8);
