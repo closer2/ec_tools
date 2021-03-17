@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V2.9"
+#define TOOLS_VER   "V3.0"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -2447,6 +2447,56 @@ static int sysinfo(struct ec_response_sysinfo *info)
 	return 0;
 }
 
+int cmd_s3wake(int argc, char *argv[])
+{
+	struct ec_params_reboot_ap_on_s3_v1 p;
+	int rv;
+	char *e;
+	int cmdver;
+
+	if (1 == argc) {
+		p.reboot_ap_at_s3_cyclecount = 1; /* default is 1 */
+		p.reboot_ap_at_s3_delay = 30; /* default is 30sec */
+	} else if (2 == argc) {
+		fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is s3 wake cycle count\n"
+			"  <time> is s3 wake time\n", argv[0]);
+			return -1;
+	} else if (3 == argc){
+		p.reboot_ap_at_s3_cyclecount = strtol(argv[1], &e, 0);
+
+		if (e && *e) {
+			fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is s3 wake cycle count\n"
+			"  <time> is s3 wake time\n", argv[0]);
+			return -1;
+		}
+
+		p.reboot_ap_at_s3_delay = strtol(argv[2], &e, 0);
+		
+		if (e && *e) {
+			fprintf(stderr,
+			"Usage: %s <cycle> <time>\n"
+			"  <cycle> is s3 wake cycle count\n"
+			"  <time> is s3 wake time\n", argv[0]);
+			return -1;
+		}
+	} else {
+		return -1;
+	}
+	if (ec_cmd_version_supported(EC_CMD_REBOOT_AP_ON_S3, 1))
+		cmdver = 1;
+	else
+		cmdver = 0;
+
+	printf("s3 wake time cycle count to %d\n", p.reboot_ap_at_s3_cyclecount);
+	printf("s3 wake time set to %dsec\n", p.reboot_ap_at_s3_delay);
+	rv = ec_command(EC_CMD_REBOOT_AP_ON_S3, cmdver, &p, sizeof(p), NULL, 0);
+	return (rv < 0 ? rv : 0);
+}
+
 int cmd_sysinfo(int argc, char **argv)
 {
 	struct ec_response_sysinfo r;
@@ -4557,6 +4607,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"sertest", cmd_serial_test},
 	//{"smartdischarge", cmd_smart_discharge},
 	//{"stress", cmd_stress_test},
+	{"s3wake", cmd_s3wake},
 	{"sysinfo", cmd_sysinfo},
 	//{"port80flood", cmd_port_80_flood},
 	{"temps", cmd_temperature},
@@ -4600,7 +4651,7 @@ const char help_str[] =
 	"      Prints the last output to the EC debug console\n"
 	"  coldboot <cycle> <time>\n"
 	"      Requests that the EC will automatically start the AP the next time\n"
-	"      when enter the S5/S3 power state. default cycle is 1, time is 30sec.\n"
+	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
     "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
 	"  ecbackup <filename>\n"
@@ -4668,6 +4719,9 @@ const char help_str[] =
 	"      Set real-time clock\n"
 	"  rtcsetalarm <sec>\n"
 	"      Set real-time clock alarm to go off in <sec> seconds\n"
+	"  s3wake\n"
+	"      Requests that the EC will automatically start the AP the next time\n"
+	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
 	"  sysinfo [flags|reset_flags|firmware_copy]\n"
 	"      Display system info.\n"
 	"  temps <sensorid | all>\n"
