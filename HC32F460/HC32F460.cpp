@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V1.0"
+#define  TOOLS_VER   "V1.2"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -1005,7 +1005,6 @@ int main(int argc, char *argv[])
     IOInitOK = InitializeWinIo();
     if(IOInitOK)
     {
-        printf("WinIo OK\n");
     }
     else
     {
@@ -1016,14 +1015,38 @@ int main(int argc, char *argv[])
     /* Init lpc */
     comm_init_lpc();
 
-	rv = check_mcu_fw_version(argv[1]);
+    if(!strcmp("help", argv[1]))
+    {
+        printf("toolversion:  read hc32f460 tool version\n");
+        printf("version:      read hc32f460 firmware version\n");
+        printf("update:       update hc32f460 firmware\n\n");
+        goto end;
+    }
+    else if(!strcmp("toolversion", argv[1]))
+    {
+        printf("HC32F460 TOOL VERSION = %s\n\n", TOOLS_VER);
+        goto end;
+    }
+    else if(!strcmp("version", argv[1]))
+    {
+        read_hc32f460_version();
+        printf("set mcu_version=%x%02x\n\n", mainVersion, subVersion);
+        goto end;
+    }
+    else if(argc != 3 && !strcmp("update", argv[1]))
+    {
+        printf("Usage: update <filename>\n\n");
+        goto end;
+    }
+
+	rv = check_mcu_fw_version(argv[2]);
 	if(rv < 0)
 	{
 		printf("The firmware version is the same!\n\n");
 		goto end;
 	}
 
-	rv = get_firmware_size(argv[1]);
+	rv = get_firmware_size(argv[2]);
 	if(rv < 0)
 	{
 		printf("get firmware size failed!\n\n");
