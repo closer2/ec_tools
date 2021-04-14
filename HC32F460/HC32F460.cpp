@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V1.2"
+#define  TOOLS_VER   "V1.3"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -681,7 +681,7 @@ int get_firmware_size(char *filename)
 
 	fseek(binaryFile, 0, SEEK_END);
 	binSize = ftell(binaryFile);
-	printf("binSize = %ld Byte\n", binSize);
+	/* printf("binSize = %ld Byte\n", binSize); */
 
 	return 0;
 }
@@ -885,9 +885,9 @@ int hc32f460_update_start(void)
 	int write_len;
 	int rv;
 
-	printf("Package data...\n");
+	/* printf("Package data...\n"); */
 	write_len = Upgrade_Data_Code(CMD_ID_UpdateStart, write_buf);
-	printf("Package Done\nwrite_len = %d\n", write_len);
+	/* printf("Package Done\nwrite_len = %d\n", write_len); */
 	
 	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf, write_len);
 	if(rv < 0)
@@ -897,7 +897,7 @@ int hc32f460_update_start(void)
 	}
 	else
 	{
-		printf("CMD_ID_UpdateStart = success!\n\n");
+		/* printf("CMD_ID_UpdateStart = success!\n\n"); */
 		return 0;
 	}
 }
@@ -908,9 +908,9 @@ int hc32f460_update_end(void)
 	int write_len;
 	int rv;
 
-	printf("Package data...\n");
+	/* printf("Package data...\n"); */
 	write_len = Upgrade_Data_Code(CMD_ID_UpdateEnd, write_buf);
-	printf("Package Done\nwrite_len = %d\n", write_len);
+	/* printf("Package Done\nwrite_len = %d\n", write_len); */
 
 	rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf, write_len);
 	if(rv < 0)
@@ -920,7 +920,7 @@ int hc32f460_update_end(void)
 	}
 	else
 	{
-		printf("CMD_ID_UpdateEnd = success!\n\n");
+		/* printf("CMD_ID_UpdateEnd = success!\n\n"); */
 		return 0;
 	}
 }
@@ -934,7 +934,7 @@ int hc32f460_update_continue(void)
 	while(startAddress < binSize)
 	{
 		read_hc32f460_status();
-		printf("hc32f460Status = %02x\n", hc32f460Status);
+		/* printf("hc32f460Status = %02x\n", hc32f460Status); */
 		
 		if(0x30 == hc32f460Status)
 		{
@@ -949,10 +949,10 @@ int hc32f460_update_continue(void)
 		else if(0x00 == hc32f460Status)
 		{
 			memset(write_buf, 0, 128);
-			printf("Package data...\n");
-			printf("startAddress = %d\n", startAddress);
+			/* printf("Package data...\n"); */
+			/* printf("startAddress = %d\n", startAddress); */
 			write_len = Upgrade_Data_Code(CMD_ID_UpdateContinue, write_buf);
-			printf("Package Done\nwrite_len = %d\n", write_len);
+			/* printf("Package Done\nwrite_len = %d\n", write_len); */
 			
 			rv = hc32f460_i2c_write(HC32F460_REG_FLASHADDR_0x03, write_buf, write_len);
 			if(rv < 0)
@@ -962,12 +962,18 @@ int hc32f460_update_continue(void)
 			}
 			else
 			{
-				printf("CMD_ID_UpdateContinue = success!\n\n");
+				/* printf("CMD_ID_UpdateContinue = success!\n\n"); */
 			}
 			_sleep(10);
+
+			if(!(startAddress%0x88))
+			{
+				printf("#%3d%%\b\b\b\b",(startAddress*100)/binSize);
+			}
 		}
 	}
 
+	printf("%3d%%\n\n",100);
 	fclose(binaryFile);
 	
 	return 0;
@@ -976,7 +982,8 @@ int hc32f460_update_continue(void)
 int update_hc32f460_firmware(void)
 {
 	int rv;
-	
+
+	printf("updating...\n");
 	rv = hc32f460_update_start();
 	if(rv < 0)
 		return rv;
@@ -1017,9 +1024,9 @@ int main(int argc, char *argv[])
 
     if(!strcmp("help", argv[1]))
     {
-        printf("toolversion:  read hc32f460 tool version\n");
-        printf("version:      read hc32f460 firmware version\n");
-        printf("update:       update hc32f460 firmware\n\n");
+        printf("toolversion:        read hc32f460 tool version\n");
+        printf("version:            read hc32f460 firmware version\n");
+        printf("update <filename>:  update hc32f460 firmware\n\n");
         goto end;
     }
     else if(!strcmp("toolversion", argv[1]))
