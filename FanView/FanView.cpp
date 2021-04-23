@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V2.2"
+#define  TOOLS_VER   "V2.3"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -118,6 +118,376 @@ BYTE EC_ReadByte_PM(BYTE index)
 }
 //==============================================================================
 
+//========================= Chrome EC interface ================================
+typedef unsigned char      uint8_t;
+typedef signed char        int8_t;
+
+typedef unsigned short     uint16_t;
+typedef signed short       int16_t;
+
+typedef unsigned int       uint32_t;
+typedef signed int         int32_t;
+
+
+#define EC_LPC_ADDR_MEMMAP       0x900
+#define EC_MEMMAP_SIZE         255 /* ACPI IO buffer max is 255 bytes */
+#define EC_MEMMAP_TEXT_MAX     8   /* Size of a string in the memory map */
+
+#define EC_LPC_STATUS_FROM_HOST   0x02
+#define EC_LPC_STATUS_PROCESSING  0x04
+
+#define EC_LPC_STATUS_BUSY_MASK \
+	(EC_LPC_STATUS_FROM_HOST | EC_LPC_STATUS_PROCESSING)
+
+
+#define EC_COMMAND_PROTOCOL_3 0xda
+
+#define EC_HOST_REQUEST_VERSION 3
+
+/**
+ * struct ec_host_request - Version 3 request from host.
+ * @struct_version: Should be 3. The EC will return EC_RES_INVALID_HEADER if it
+ *                  receives a header with a version it doesn't know how to
+ *                  parse.
+ * @checksum: Checksum of request and data; sum of all bytes including checksum
+ *            should total to 0.
+ * @command: Command to send (EC_CMD_...)
+ * @command_version: Command version.
+ * @reserved: Unused byte in current protocol version; set to 0.
+ * @data_len: Length of data which follows this header.
+ */
+struct ec_host_request {
+	uint8_t struct_version;
+	uint8_t checksum;
+	uint16_t command;
+	uint8_t command_version;
+	uint8_t reserved;
+	uint16_t data_len;
+};
+
+#define EC_HOST_RESPONSE_VERSION 3
+
+/**
+ * struct ec_host_response - Version 3 response from EC.
+ * @struct_version: Struct version (=3).
+ * @checksum: Checksum of response and data; sum of all bytes including
+ *            checksum should total to 0.
+ * @result: EC's response to the command (separate from communication failure)
+ * @data_len: Length of data which follows this header.
+ * @reserved: Unused bytes in current protocol version; set to 0.
+ */
+struct ec_host_response {
+	uint8_t struct_version;
+	uint8_t checksum;
+	uint16_t result;
+	uint16_t data_len;
+	uint16_t reserved;
+};
+
+/* Protocol version 3 */
+#define EC_LPC_ADDR_HOST_PACKET  0x800  /* Offset of version 3 packet */
+#define EC_LPC_HOST_PACKET_SIZE  0x100  /* Max size of version 3 packet */
+
+/* I/O addresses for host command */
+#define EC_LPC_ADDR_HOST_DATA  0x200
+#define EC_LPC_ADDR_HOST_CMD   0x204
+
+
+enum ec_status {
+	EC_RES_SUCCESS = 0,
+	EC_RES_INVALID_COMMAND = 1,
+	EC_RES_ERROR = 2,
+	EC_RES_INVALID_PARAM = 3,
+	EC_RES_ACCESS_DENIED = 4,
+	EC_RES_INVALID_RESPONSE = 5,
+	EC_RES_INVALID_VERSION = 6,
+	EC_RES_INVALID_CHECKSUM = 7,
+	EC_RES_IN_PROGRESS = 8,		/* Accepted, command in progress */
+	EC_RES_UNAVAILABLE = 9,		/* No response available */
+	EC_RES_TIMEOUT = 10,		/* We got a timeout */
+	EC_RES_OVERFLOW = 11,		/* Table / data overflow */
+	EC_RES_INVALID_HEADER = 12,     /* Header contains invalid data */
+	EC_RES_REQUEST_TRUNCATED = 13,  /* Didn't get the entire request */
+	EC_RES_RESPONSE_TOO_BIG = 14,   /* Response was too big to handle */
+	EC_RES_BUS_ERROR = 15,		/* Communications bus error */
+	EC_RES_BUSY = 16,		/* Up but too busy.  Should retry */
+	EC_RES_INVALID_HEADER_VERSION = 17,  /* Header version invalid */
+	EC_RES_INVALID_HEADER_CRC = 18,      /* Header CRC invalid */
+	EC_RES_INVALID_DATA_CRC = 19,        /* Data CRC invalid */
+	EC_RES_DUP_UNAVAILABLE = 20,         /* Can't resend response */
+
+	EC_RES_MAX = UINT16_MAX		/**< Force enum to be 16 bits */
+} __packed;
+
+
+uint8_t inb(uint16_t io_port)
+{
+	DWORD in_data;
+	uint8_t return_data;
+	GetPortVal(io_port, &in_data, 1);
+	return_data = in_data&0xFF;
+	return return_data;
+}
+
+void outb(uint8_t out_data, uint16_t io_port)
+{
+	SetPortVal(io_port, out_data, 1);
+}
+
+
+static int ec_readmem_lpc(int offset, int bytes, void *dest)
+{
+	int i = offset;
+	char *s = (char *)dest;
+	int cnt = 0;
+
+	if (offset >= EC_MEMMAP_SIZE - bytes)
+		return -1;
+
+	if (bytes) {				/* fixed length */
+		for (; cnt < bytes; i++, s++, cnt++)
+			*s = inb(EC_LPC_ADDR_MEMMAP + i);
+	} else {				/* string */
+		for (; i < EC_MEMMAP_SIZE; i++, s++) {
+			*s = inb(EC_LPC_ADDR_MEMMAP + i);
+			cnt++;
+			if (!*s)
+				break;
+		}
+	}
+
+	return cnt;
+}
+
+
+#define INITIAL_UDELAY 5     /* 5 us */
+#define MAXIMUM_UDELAY 10000 /* 10 ms */
+/* Don't use a macro where an inline will do... */
+static inline int MIN(int a, int b) { return a < b ? a : b; }
+static inline int MAX(int a, int b) { return a > b ? a : b; }
+
+/* ec_command return value for non-success result from EC */
+#define EECRESULT 1000
+
+#define ec_command  ec_command_lpc_3
+
+int ec_max_outsize, ec_max_insize;
+void *ec_outbuf;
+void *ec_inbuf;
+
+
+/*
+ * Wait for the EC to be unbusy.  Returns 0 if unbusy, non-zero if
+ * timeout.
+ */
+static int wait_for_ec(int status_addr, int timeout_usec)
+{
+	int i;
+	int delay = INITIAL_UDELAY;
+
+	for (i = 0; i < timeout_usec; i += delay) {
+		/*
+		 * Delay first, in case we just sent out a command but the EC
+		 * hasn't raised the busy flag.  However, I think this doesn't
+		 * happen since the LPC commands are executed in order and the
+		 * busy flag is set by hardware.  Minor issue in any case,
+		 * since the initial delay is very short.
+		 */
+		_sleep(MIN(delay, timeout_usec - i)); // millisecond
+
+		if (!(inb(status_addr) & EC_LPC_STATUS_BUSY_MASK))
+			return 0;
+
+		/* Increase the delay interval after a few rapid checks */
+		if (i > 20)
+			delay = MIN(delay * 2, MAXIMUM_UDELAY);
+	}
+	return -1;  /* Timeout */
+}
+
+static int ec_command_lpc_3(int command, int version,
+			  const void *outdata, int outsize,
+			  void *indata, int insize)
+{
+	struct ec_host_request rq;
+	struct ec_host_response rs;
+	const uint8_t *d;
+	uint8_t *dout;
+	int csum = 0;
+	int i;
+
+	/* Fail if output size is too big */
+	if (outsize + sizeof(rq) > EC_LPC_HOST_PACKET_SIZE)
+		return -EC_RES_REQUEST_TRUNCATED;
+
+	/* Fill in request packet */
+	/* TODO(crosbug.com/p/23825): This should be common to all protocols */
+	rq.struct_version = EC_HOST_REQUEST_VERSION;
+	rq.checksum = 0;
+	rq.command = command;
+	rq.command_version = version;
+	rq.reserved = 0;
+	rq.data_len = outsize;
+
+	/* Copy data and start checksum */
+	for (i = 0, d = (const uint8_t *)outdata; i < outsize; i++, d++) {
+		outb(*d, EC_LPC_ADDR_HOST_PACKET + sizeof(rq) + i);
+		csum += *d;
+	}
+
+	/* Finish checksum */
+	for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
+		csum += *d;
+
+	/* Write checksum field so the entire packet sums to 0 */
+	rq.checksum = (uint8_t)(-csum);
+
+	/* Copy header */
+	for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
+		outb(*d, EC_LPC_ADDR_HOST_PACKET + i);
+
+	/* Start the command */
+	outb(EC_COMMAND_PROTOCOL_3, EC_LPC_ADDR_HOST_CMD);
+
+	if (wait_for_ec(EC_LPC_ADDR_HOST_CMD, 1000000)) {
+		fprintf(stderr, "Timeout waiting for EC response\n");
+		return -EC_RES_ERROR;
+	}
+
+	/* Check result */
+	i = inb(EC_LPC_ADDR_HOST_DATA);
+	if (i) {
+		fprintf(stderr, "EC returned error result code %d\n", i);
+		return -EECRESULT - i;
+	}
+
+	/* Read back response header and start checksum */
+	csum = 0;
+	for (i = 0, dout = (uint8_t *)&rs; i < sizeof(rs); i++, dout++) {
+		*dout = inb(EC_LPC_ADDR_HOST_PACKET + i);
+		csum += *dout;
+	}
+
+	if (rs.struct_version != EC_HOST_RESPONSE_VERSION) {
+		fprintf(stderr, "EC response version mismatch\n");
+		return -EC_RES_INVALID_RESPONSE;
+	}
+
+	if (rs.reserved) {
+		fprintf(stderr, "EC response reserved != 0\n");
+		return -EC_RES_INVALID_RESPONSE;
+	}
+
+	if (rs.data_len > insize) {
+		fprintf(stderr, "EC returned too much data\n");
+		fprintf(stderr, "%d--%d\n", rs.data_len, insize);
+		//return -EC_RES_RESPONSE_TOO_BIG;
+	}
+
+	/* Read back data and update checksum */
+	for (i = 0, dout = (uint8_t *)indata; i < rs.data_len; i++, dout++) {
+		*dout = inb(EC_LPC_ADDR_HOST_PACKET + sizeof(rs) + i);
+		csum += *dout;
+	}
+
+	/* Verify checksum */
+	if ((uint8_t)csum) {
+		fprintf(stderr, "EC response has invalid checksum\n");
+		return -EC_RES_INVALID_CHECKSUM;
+	}
+
+	/* Return actual amount of data received */
+	return rs.data_len;
+}
+
+int comm_init_lpc(void)
+{
+	/*
+	 * Test if LPC command args are supported.
+	 *
+	 * The cheapest way to do this is by looking for the memory-mapped
+	 * flag.  This is faster than sending a new-style 'hello' command and
+	 * seeing whether the EC sets the EC_HOST_ARGS_FLAG_FROM_HOST flag
+	 * in args when it responds.
+	 */
+	
+	/*
+	 * We have modified the EC ACPI RAM definition.
+	 * Therefore, the "EC" character cannot be checked.
+	 *  Morgen@2021/01/02
+	 * */
+	#if 0
+	if (inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID) != 'E' ||
+	    inb(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_ID + 1) != 'C') {
+		fprintf(stderr, "Missing Chromium EC memory map.\n");
+		return -5;
+	}
+	#endif
+
+	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
+			sizeof(struct ec_host_request);
+	ec_max_insize = EC_LPC_HOST_PACKET_SIZE -
+			sizeof(struct ec_host_response);
+
+	ec_outbuf = malloc(ec_max_outsize);
+	ec_inbuf = malloc(ec_max_insize);
+	
+	return 0;
+}
+
+static uint8_t read_mapped_mem8(uint8_t offset)
+{
+	int ret;
+	uint8_t val;
+
+	ret = ec_readmem_lpc(offset, sizeof(val), &val);
+	if (ret <= 0) {
+		fprintf(stderr, "failure in %s(): %d\n", __func__, ret);
+		exit(1);
+	}
+	return val;
+}
+
+static uint16_t read_mapped_mem16(uint8_t offset)
+{
+	int ret;
+	uint16_t val;
+
+	ret = ec_readmem_lpc(offset, sizeof(val), &val);
+	if (ret <= 0) {
+		fprintf(stderr, "failure in %s(): %d\n", __func__, ret);
+		exit(1);
+	}
+	return val;
+}
+
+static uint32_t read_mapped_mem32(uint8_t offset)
+{
+	int ret;
+	uint32_t val;
+
+	ret = ec_readmem_lpc(offset, sizeof(val), &val);
+	if (ret <= 0) {
+		fprintf(stderr, "failure in %s(): %d\n", __func__, ret);
+		exit(1);
+	}
+	return val;
+}
+
+static int read_mapped_string(uint8_t offset, char *buffer, int max_size)
+{
+	int ret;
+
+	ret = ec_readmem_lpc(offset, max_size, buffer);
+	if (ret <= 0) {
+		fprintf(stderr, "failure in %s(): %d\n", __func__, ret);
+		exit(1);
+	}
+	return ret;
+}
+//==============================================================================
+
+
 //===============================Console control interface======================
 #define EFI_BLACK                 0x00
 #define EFI_BLUE                  0x01
@@ -216,110 +586,9 @@ char Key_Value;
 
 
 //==============================================================================
-typedef unsigned char      uint8_t;
-typedef signed char        int8_t;
-
-typedef unsigned short     uint16_t;
-typedef signed short       int16_t;
-
-typedef unsigned int       uint32_t;
-typedef signed int         int32_t;
-
-
-uint8_t inb(uint16_t io_port)
-{
-	DWORD in_data;
-	uint8_t return_data;
-	GetPortVal(io_port, &in_data, 1);
-	return_data = in_data&0xFF;
-	return return_data;
-}
-
-void outb(uint8_t out_data, uint16_t io_port)
-{
-	SetPortVal(io_port, out_data, 1);
-}
 
 
 
-#define EC_COMMAND_PROTOCOL_3 0xda
-
-#define EC_HOST_REQUEST_VERSION 3
-
-/**
- * struct ec_host_request - Version 3 request from host.
- * @struct_version: Should be 3. The EC will return EC_RES_INVALID_HEADER if it
- *                  receives a header with a version it doesn't know how to
- *                  parse.
- * @checksum: Checksum of request and data; sum of all bytes including checksum
- *            should total to 0.
- * @command: Command to send (EC_CMD_...)
- * @command_version: Command version.
- * @reserved: Unused byte in current protocol version; set to 0.
- * @data_len: Length of data which follows this header.
- */
-struct ec_host_request {
-	uint8_t struct_version;
-	uint8_t checksum;
-	uint16_t command;
-	uint8_t command_version;
-	uint8_t reserved;
-	uint16_t data_len;
-};
-
-#define EC_HOST_RESPONSE_VERSION 3
-
-/**
- * struct ec_host_response - Version 3 response from EC.
- * @struct_version: Struct version (=3).
- * @checksum: Checksum of response and data; sum of all bytes including
- *            checksum should total to 0.
- * @result: EC's response to the command (separate from communication failure)
- * @data_len: Length of data which follows this header.
- * @reserved: Unused bytes in current protocol version; set to 0.
- */
-struct ec_host_response {
-	uint8_t struct_version;
-	uint8_t checksum;
-	uint16_t result;
-	uint16_t data_len;
-	uint16_t reserved;
-};
-
-/* Protocol version 3 */
-#define EC_LPC_ADDR_HOST_PACKET  0x800  /* Offset of version 3 packet */
-#define EC_LPC_HOST_PACKET_SIZE  0x100  /* Max size of version 3 packet */
-
-/* I/O addresses for host command */
-#define EC_LPC_ADDR_HOST_DATA  0x200
-#define EC_LPC_ADDR_HOST_CMD   0x204
-
-
-enum ec_status {
-	EC_RES_SUCCESS = 0,
-	EC_RES_INVALID_COMMAND = 1,
-	EC_RES_ERROR = 2,
-	EC_RES_INVALID_PARAM = 3,
-	EC_RES_ACCESS_DENIED = 4,
-	EC_RES_INVALID_RESPONSE = 5,
-	EC_RES_INVALID_VERSION = 6,
-	EC_RES_INVALID_CHECKSUM = 7,
-	EC_RES_IN_PROGRESS = 8,		/* Accepted, command in progress */
-	EC_RES_UNAVAILABLE = 9,		/* No response available */
-	EC_RES_TIMEOUT = 10,		/* We got a timeout */
-	EC_RES_OVERFLOW = 11,		/* Table / data overflow */
-	EC_RES_INVALID_HEADER = 12,     /* Header contains invalid data */
-	EC_RES_REQUEST_TRUNCATED = 13,  /* Didn't get the entire request */
-	EC_RES_RESPONSE_TOO_BIG = 14,   /* Response was too big to handle */
-	EC_RES_BUS_ERROR = 15,		/* Communications bus error */
-	EC_RES_BUSY = 16,		/* Up but too busy.  Should retry */
-	EC_RES_INVALID_HEADER_VERSION = 17,  /* Header version invalid */
-	EC_RES_INVALID_HEADER_CRC = 18,      /* Header CRC invalid */
-	EC_RES_INVALID_DATA_CRC = 19,        /* Data CRC invalid */
-	EC_RES_DUP_UNAVAILABLE = 20,         /* Can't resend response */
-
-	EC_RES_MAX = UINT16_MAX		/**< Force enum to be 16 bits */
-} __packed;
 
 /*************************************************************/
 
@@ -348,140 +617,6 @@ struct ec_params_pwm_set_fan_target_rpm_v1 {
 #define EC_CMD_THERMAL_AUTO_FAN_CTRL 0x0052
 
 /*************************************************************/
-
-#define EC_LPC_STATUS_FROM_HOST   0x02
-#define EC_LPC_STATUS_PROCESSING  0x04
-
-#define INITIAL_UDELAY 5     /* 5 us */
-#define MAXIMUM_UDELAY 10000 /* 10 ms */
-/* Don't use a macro where an inline will do... */
-static inline int MIN(int a, int b) { return a < b ? a : b; }
-static inline int MAX(int a, int b) { return a > b ? a : b; }
-#define EC_LPC_STATUS_BUSY_MASK \
-	(EC_LPC_STATUS_FROM_HOST | EC_LPC_STATUS_PROCESSING)
-
-static int wait_for_ec(int status_addr, int timeout_usec)
-{
-	int i;
-	int delay = INITIAL_UDELAY;
-
-	for (i = 0; i < timeout_usec; i += delay) {
-		/*
-		 * Delay first, in case we just sent out a command but the EC
-		 * hasn't raised the busy flag.  However, I think this doesn't
-		 * happen since the LPC commands are executed in order and the
-		 * busy flag is set by hardware.  Minor issue in any case,
-		 * since the initial delay is very short.
-		 */
-		_sleep(MIN(delay, timeout_usec - i)); // millisecond
-
-		if (!(inb(status_addr) & EC_LPC_STATUS_BUSY_MASK))
-			return 0;
-
-		/* Increase the delay interval after a few rapid checks */
-		if (i > 20)
-			delay = MIN(delay * 2, MAXIMUM_UDELAY);
-	}
-	return -1;  /* Timeout */
-}
-
-
-#define EECRESULT 1000
-static int ec_command_lpc_3(int command, int version,
-			  const void *outdata, int outsize,
-			  void *indata, int insize)
-{
-	struct ec_host_request rq;
-	struct ec_host_response rs;
-	const uint8_t *d;
-	uint8_t *dout;
-	int csum = 0;
-	int i;
-
-	/* Fail if output size is too big */
-	if (outsize + sizeof(rq) > EC_LPC_HOST_PACKET_SIZE)
-		return -EC_RES_REQUEST_TRUNCATED;
-
-	/* Fill in request packet */
-	/* TODO(crosbug.com/p/23825): This should be common to all protocols */
-	rq.struct_version = EC_HOST_REQUEST_VERSION;
-	rq.checksum = 0;
-	rq.command = command;
-	rq.command_version = version;
-	rq.reserved = 0;
-	rq.data_len = outsize;
-
-	/* Copy data and start checksum */
-	for (i = 0, d = (const uint8_t *)outdata; i < outsize; i++, d++) {
-		outb(*d, EC_LPC_ADDR_HOST_PACKET + sizeof(rq) + i);
-		csum += *d;
-	}
-
-	/* Finish checksum */
-	for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
-		csum += *d;
-
-	/* Write checksum field so the entire packet sums to 0 */
-	rq.checksum = (uint8_t)(-csum);
-
-	/* Copy header */
-	for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
-		outb(*d, EC_LPC_ADDR_HOST_PACKET + i);
-
-	/* Start the command */
-	outb(EC_COMMAND_PROTOCOL_3, EC_LPC_ADDR_HOST_CMD);
-
-	if (wait_for_ec(EC_LPC_ADDR_HOST_CMD, 1000000)) {
-		fprintf(stderr, "Timeout waiting for EC response\n");
-		return -EC_RES_ERROR;
-	}
-
-	/* Check result */
-	i = inb(EC_LPC_ADDR_HOST_DATA);
-	if (i) {
-		fprintf(stderr, "EC returned error result code %d\n", i);
-		return -EECRESULT - i;
-	}
-
-	/* Read back response header and start checksum */
-	csum = 0;
-	for (i = 0, dout = (uint8_t *)&rs; i < sizeof(rs); i++, dout++) {
-		*dout = inb(EC_LPC_ADDR_HOST_PACKET + i);
-		csum += *dout;
-	}
-
-	if (rs.struct_version != EC_HOST_RESPONSE_VERSION) {
-		fprintf(stderr, "EC response version mismatch\n");
-		return -EC_RES_INVALID_RESPONSE;
-	}
-
-	if (rs.reserved) {
-		fprintf(stderr, "EC response reserved != 0\n");
-		return -EC_RES_INVALID_RESPONSE;
-	}
-
-	if (rs.data_len > insize) {
-		fprintf(stderr, "EC returned too much data\n");
-		fprintf(stderr, "%d--%d\n", rs.data_len, insize);
-		//return -EC_RES_RESPONSE_TOO_BIG;
-	}
-
-	/* Read back data and update checksum */
-	for (i = 0, dout = (uint8_t *)indata; i < rs.data_len; i++, dout++) {
-		*dout = inb(EC_LPC_ADDR_HOST_PACKET + sizeof(rs) + i);
-		csum += *dout;
-	}
-
-	/* Verify checksum */
-	if ((uint8_t)csum) {
-		fprintf(stderr, "EC response has invalid checksum\n");
-		return -EC_RES_INVALID_CHECKSUM;
-	}
-
-	/* Return actual amount of data received */
-	return rs.data_len;
-}
-
 
 void set_fan_rpm(uint8_t index, uint32_t rpm)
 {
@@ -837,87 +972,87 @@ void PollFanInfo(void)
     }*/
     if(BAT1_Info[Temp_Sensor1].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor1].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor1].InfoAddr_L);
         BAT1_Info[Temp_Sensor1].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor1].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor1].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor2].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor2].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor2].InfoAddr_L);
         BAT1_Info[Temp_Sensor2].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor2].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor2].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor3].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor3].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor3].InfoAddr_L);
         BAT1_Info[Temp_Sensor3].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor3].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor3].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor4].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor4].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor4].InfoAddr_L);
         BAT1_Info[Temp_Sensor4].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor4].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor4].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor5].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor5].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor5].InfoAddr_L);
         BAT1_Info[Temp_Sensor5].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor5].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor5].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor6].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor6].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor6].InfoAddr_L);
         BAT1_Info[Temp_Sensor6].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor6].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor6].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor7].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor7].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor7].InfoAddr_L);
         BAT1_Info[Temp_Sensor7].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor7].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor7].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor8].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor8].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor8].InfoAddr_L);
         BAT1_Info[Temp_Sensor8].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor8].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor8].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor9].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor9].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor9].InfoAddr_L);
         BAT1_Info[Temp_Sensor9].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor9].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor9].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor10].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor10].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor10].InfoAddr_L);
         BAT1_Info[Temp_Sensor10].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor10].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor10].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor11].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor11].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor11].InfoAddr_L);
         BAT1_Info[Temp_Sensor11].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor11].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor11].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor12].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor12].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor12].InfoAddr_L);
         BAT1_Info[Temp_Sensor12].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor12].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor12].InfoInt);
     }
     if(BAT1_Info[Temp_Sensor13].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor13].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor13].InfoAddr_L);
         BAT1_Info[Temp_Sensor13].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor13].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor13].InfoInt);
     }
     
     if(BAT1_Info[FAN1_Current_RPM].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[FAN1_Current_RPM].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[FAN1_Current_RPM].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[FAN1_Current_RPM].InfoAddr_H)<<8
+                | read_mapped_mem8(BAT1_Info[FAN1_Current_RPM].InfoAddr_L);
         BAT1_Info[FAN1_Current_RPM].InfoInt = tmpvalue;
         sprintf(BAT1_Info[FAN1_Current_RPM].InfoValue, "%-8d ",BAT1_Info[FAN1_Current_RPM].InfoInt);
     }
@@ -930,8 +1065,8 @@ void PollFanInfo(void)
     
     if(BAT1_Info[FAN2_Current_RPM].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[FAN2_Current_RPM].InfoAddr_H)<<8
-                | EC_RAM_READ(BAT1_Info[FAN2_Current_RPM].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[FAN2_Current_RPM].InfoAddr_H)<<8
+                | read_mapped_mem8(BAT1_Info[FAN2_Current_RPM].InfoAddr_L);
         BAT1_Info[FAN2_Current_RPM].InfoInt = tmpvalue;
         sprintf(BAT1_Info[FAN2_Current_RPM].InfoValue, "%-8d ",BAT1_Info[FAN2_Current_RPM].InfoInt);
     }
@@ -945,79 +1080,79 @@ void PollFanInfo(void)
 	/* sensor avgs */
 	if(BAT1_Info[Temp_Sensor1_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor1_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor1_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor1_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor1_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor1_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor2_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor2_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor2_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor2_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor2_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor2_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor3_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor3_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor3_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor3_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor3_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor3_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor4_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor4_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor4_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor4_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor4_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor4_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor5_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor5_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor5_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor5_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor5_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor5_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor6_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor6_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor6_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor6_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor6_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor6_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor7_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor7_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor7_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor7_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor7_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor7_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor8_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor8_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor8_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor8_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor8_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor8_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor9_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor9_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor9_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor9_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor9_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor9_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor10_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor10_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor10_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor10_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor10_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor10_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor11_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor11_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor11_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor11_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor11_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor11_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor12_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor12_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor12_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor12_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor12_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor12_Avg].InfoInt);
     }
 	if(BAT1_Info[Temp_Sensor13_Avg].Active)
     {
-        tmpvalue = EC_RAM_READ(BAT1_Info[Temp_Sensor13_Avg].InfoAddr_L);
+        tmpvalue = read_mapped_mem8(BAT1_Info[Temp_Sensor13_Avg].InfoAddr_L);
         BAT1_Info[Temp_Sensor13_Avg].InfoInt = tmpvalue;
         sprintf(BAT1_Info[Temp_Sensor13_Avg].InfoValue, "%-8d C",BAT1_Info[Temp_Sensor13_Avg].InfoInt);
     }
