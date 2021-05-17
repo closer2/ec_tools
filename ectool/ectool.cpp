@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V3.0"
+#define TOOLS_VER   "V3.1"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -81,9 +81,24 @@ void outb(uint8_t out_data, uint16_t io_port)
 {
 	SetPortVal(io_port, out_data, 1);
 }
+
+uint16_t inb_dword(uint16_t io_port)
+{
+	DWORD in_data;
+	uint16_t return_data;
+	GetPortVal(io_port, &in_data, 4);
+	return_data = in_data&0xFFFF;
+	return return_data;
+}
+
+void outb_dword(uint32_t out_data, uint16_t io_port)
+{
+	SetPortVal(io_port, out_data, 4);
+}
 //==============================================================================
 
-
+uint16_t lpc_addr_host_packet = 0x800;
+uint16_t lpc_addr_memap = 0x900;
 
 //======================== PM-1 channel for ACPI================================
 WORD PM_STATUS_PORT66          =0x66;
@@ -159,9 +174,9 @@ uint8_t EC_ReadByte_PM(uint8_t index)
 //--------------send bios command------------------------------/
 void send_bios_cmd(uint8_t cmd, uint8_t data)
 {
-	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, data);
-	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD_VERIFY, 0xFF-cmd);
-	EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, cmd);
+	EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA, data);
+	EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_CMD_VERIFY, 0xFF-cmd);
+	EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_CMD, cmd);
 }
 
 //==============================================================================
@@ -237,10 +252,10 @@ static int ec_readmem_lpc(int offset, int bytes, void *dest)
 
 	if (bytes) {				/* fixed length */
 		for (; cnt < bytes; i++, s++, cnt++)
-			*s = inb(EC_LPC_ADDR_MEMMAP + i);
+			*s = inb(lpc_addr_memap + i);
 	} else {				/* string */
 		for (; i < EC_MEMMAP_SIZE; i++, s++) {
-			*s = inb(EC_LPC_ADDR_MEMMAP + i);
+			*s = inb(lpc_addr_memap + i);
 			cnt++;
 			if (!*s)
 				break;
@@ -322,7 +337,7 @@ static int ec_command_lpc_3(int command, int version,
 
 	/* Copy data and start checksum */
 	for (i = 0, d = (const uint8_t *)outdata; i < outsize; i++, d++) {
-		outb(*d, EC_LPC_ADDR_HOST_PACKET + sizeof(rq) + i);
+		outb(*d, lpc_addr_host_packet + sizeof(rq) + i);
 		csum += *d;
 	}
 
@@ -335,7 +350,7 @@ static int ec_command_lpc_3(int command, int version,
 
 	/* Copy header */
 	for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
-		outb(*d, EC_LPC_ADDR_HOST_PACKET + i);
+		outb(*d, lpc_addr_host_packet + i);
 
 	/* Start the command */
 	outb(EC_COMMAND_PROTOCOL_3, EC_LPC_ADDR_HOST_CMD);
@@ -355,7 +370,7 @@ static int ec_command_lpc_3(int command, int version,
 	/* Read back response header and start checksum */
 	csum = 0;
 	for (i = 0, dout = (uint8_t *)&rs; i < sizeof(rs); i++, dout++) {
-		*dout = inb(EC_LPC_ADDR_HOST_PACKET + i);
+		*dout = inb(lpc_addr_host_packet + i);
 		csum += *dout;
 	}
 
@@ -377,7 +392,7 @@ static int ec_command_lpc_3(int command, int version,
 
 	/* Read back data and update checksum */
 	for (i = 0, dout = (uint8_t *)indata; i < rs.data_len; i++, dout++) {
-		*dout = inb(EC_LPC_ADDR_HOST_PACKET + sizeof(rs) + i);
+		*dout = inb(lpc_addr_host_packet + sizeof(rs) + i);
 		csum += *dout;
 	}
 
@@ -414,6 +429,22 @@ int comm_init_lpc(void)
 		return -5;
 	}
 	#endif
+
+	uint16_t cpu_platform;
+
+	/* get cpu platform: intel = 0x8086, amd = 0x1022 */
+	outb_dword(0x80000000, 0xcf8);
+	cpu_platform = inb_dword(0xcfc);
+	if(0x8086 == cpu_platform) {
+		lpc_addr_host_packet = 0x900;
+        lpc_addr_memap = 0x800;
+	} else if (0x1022 == cpu_platform) {
+		lpc_addr_host_packet = 0x800;
+        lpc_addr_memap = 0x900;
+	} else {
+		lpc_addr_host_packet = 0x800;
+        lpc_addr_memap = 0x900;
+	}
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
 			sizeof(struct ec_host_request);
@@ -3408,15 +3439,15 @@ int cmd_set_external_wdt(int argc, char *argv[])
 		}
 		low = time;
 		high = time >> 8;
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x01);		/* enable */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1, low);		/* low byte time */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2, high);	/* high byte time */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA, 0x01);		/* enable */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA + 1, low);		/* low byte time */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA + 2, high);	/* high byte time */
 	}
 	else if(!strcmp("disable", argv[2]))
 	{
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA, 0x02);	/* disable */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 1, 0);	/* low byte time = 0 */
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_DATA + 2, 0);	/* low byte time = 0 */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA, 0x02);	/* disable */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA + 1, 0);	/* low byte time = 0 */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_DATA + 2, 0);	/* low byte time = 0 */
 	}
 	else 
 	{
@@ -3426,9 +3457,9 @@ int cmd_set_external_wdt(int argc, char *argv[])
 	}
 
 	if(!strcmp("wakeup", argv[1]))
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x04);	/* wakeup wdt control */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_CMD, 0x04);	/* wakeup wdt control */
 	else if(!strcmp("shutdown", argv[1]))
-		EC_WriteByte_PM(EC_LPC_ADDR_MEMMAP + EC_MEMMAP_BIOS_CMD, 0x05);	/* shutdown wdt control */
+		EC_WriteByte_PM(lpc_addr_memap + EC_MEMMAP_BIOS_CMD, 0x05);	/* shutdown wdt control */
 	else 
 	{
 		fprintf(stderr, "Bad type name: %s\n", argv[1]);
@@ -4450,6 +4481,26 @@ int cmd_cold_boot(int argc, char *argv[])
 	return (rv < 0 ? rv : 0);
 }
 
+int cmd_get_cpu_platform(int argc, char *argv[])
+{
+	uint16_t cpu_platform;
+
+	/* get cpu platform: intel = 0x8086, amd = 0x1022 */
+	outb_dword(0x80000000, 0xcf8);
+	cpu_platform = inb_dword(0xcfc);
+	printf("cpu_platform = %x\n", cpu_platform);
+
+	if(0x8086 == cpu_platform) {
+		printf("cpu platform is intel\n");
+	} else if (0x1022 == cpu_platform) {
+		printf("cpu platform is amd\n");
+	} else {
+		printf("cpu platform is unknow\n");
+	}
+
+	return 0;
+}
+
 
 //========================= Chrome EC command end ==============================
 #endif
@@ -4496,6 +4547,7 @@ const struct command Tool_Cmd_Array[] = {
 	//{"cmdversions", cmd_cmdversions},
 	{"console", cmd_console},
 	{"coldboot", cmd_cold_boot},
+	{"cpuplatform", cmd_get_cpu_platform},
 	//{"cec", cmd_cec},
 	//{"echash", cmd_ec_hash},
 	//{"eventclear", cmd_host_event_clear},
@@ -4652,6 +4704,8 @@ const char help_str[] =
 	"  coldboot <cycle> <time>\n"
 	"      Requests that the EC will automatically start the AP the next time\n"
 	"      when enter the S5 power state. default cycle is 1, time is 30sec.\n"
+	"  cpuplatform\n"
+	"      get cpu platform(intel/amd)\n"
     "  ecupdate <filename>\n"
     "      ecupdate ec.bin\n"
 	"  ecbackup <filename>\n"
