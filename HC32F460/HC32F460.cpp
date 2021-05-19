@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V1.3"
+#define  TOOLS_VER   "V1.4"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -230,8 +230,6 @@ char Key_Value;
 
 
 //==============================================================================
-
-
 uint8_t inb(uint16_t io_port)
 {
     DWORD in_data;
@@ -246,7 +244,22 @@ void outb(uint8_t out_data, uint16_t io_port)
     SetPortVal(io_port, out_data, 1);
 }
 
+uint16_t inb_dword(uint16_t io_port)
+{
+	DWORD in_data;
+	uint16_t return_data;
+	GetPortVal(io_port, &in_data, 4);
+	return_data = in_data&0xFFFF;
+	return return_data;
+}
 
+void outb_dword(uint32_t out_data, uint16_t io_port)
+{
+	SetPortVal(io_port, out_data, 4);
+}
+
+uint16_t lpc_addr_host_packet = 0x800;
+uint16_t lpc_addr_memap = 0x900;
 
 #define EC_COMMAND_PROTOCOL_3 0xda
 
@@ -432,7 +445,7 @@ static int ec_command_lpc_3(int command, int version,
 
     /* Copy data and start checksum */
     for (i = 0, d = (const uint8_t *)outdata; i < outsize; i++, d++) {
-        outb(*d, EC_LPC_ADDR_HOST_PACKET + sizeof(rq) + i);
+        outb(*d, lpc_addr_host_packet + sizeof(rq) + i);
         csum += *d;
     }
 
@@ -445,7 +458,7 @@ static int ec_command_lpc_3(int command, int version,
 
     /* Copy header */
     for (i = 0, d = (const uint8_t *)&rq; i < sizeof(rq); i++, d++)
-        outb(*d, EC_LPC_ADDR_HOST_PACKET + i);
+        outb(*d, lpc_addr_host_packet + i);
 
     /* Start the command */
     outb(EC_COMMAND_PROTOCOL_3, EC_LPC_ADDR_HOST_CMD);
@@ -465,7 +478,7 @@ static int ec_command_lpc_3(int command, int version,
     /* Read back response header and start checksum */
     csum = 0;
     for (i = 0, dout = (uint8_t *)&rs; i < sizeof(rs); i++, dout++) {
-        *dout = inb(EC_LPC_ADDR_HOST_PACKET + i);
+        *dout = inb(lpc_addr_host_packet + i);
         csum += *dout;
     }
 
@@ -487,7 +500,7 @@ static int ec_command_lpc_3(int command, int version,
 
     /* Read back data and update checksum */
     for (i = 0, dout = (uint8_t *)indata; i < rs.data_len; i++, dout++) {
-        *dout = inb(EC_LPC_ADDR_HOST_PACKET + sizeof(rs) + i);
+        *dout = inb(lpc_addr_host_packet + sizeof(rs) + i);
         csum += *dout;
     }
 
@@ -524,6 +537,22 @@ int comm_init_lpc(void)
 	    return -5;
 	}
 #endif
+
+	uint16_t cpu_platform;
+
+	/* get cpu platform: intel = 0x8086, amd = 0x1022 */
+	outb_dword(0x80000000, 0xcf8);
+	cpu_platform = inb_dword(0xcfc);
+	if(0x8086 == cpu_platform) {
+		lpc_addr_host_packet = 0x900;
+		lpc_addr_memap = 0x800;
+	} else if (0x1022 == cpu_platform) {
+		lpc_addr_host_packet = 0x800;
+		lpc_addr_memap = 0x900;
+	} else {
+		lpc_addr_host_packet = 0x800;
+		lpc_addr_memap = 0x900;
+	}
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
 		sizeof(struct ec_host_request);
