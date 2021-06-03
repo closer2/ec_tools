@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V3.1"
+#define TOOLS_VER   "V3.2"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -97,8 +97,8 @@ void outb_dword(uint32_t out_data, uint16_t io_port)
 }
 //==============================================================================
 
-uint16_t lpc_addr_host_packet = 0x800;
-uint16_t lpc_addr_memap = 0x900;
+uint16_t lpc_addr_host_packet = 0x900;
+uint16_t lpc_addr_memap = 0x800;
 
 //======================== PM-1 channel for ACPI================================
 WORD PM_STATUS_PORT66          =0x66;
@@ -437,13 +437,13 @@ int comm_init_lpc(void)
 	cpu_platform = inb_dword(0xcfc);
 	if(0x8086 == cpu_platform) {
 		lpc_addr_host_packet = 0x900;
-        lpc_addr_memap = 0x800;
+		lpc_addr_memap = 0x800;
 	} else if (0x1022 == cpu_platform) {
 		lpc_addr_host_packet = 0x800;
-        lpc_addr_memap = 0x900;
+		lpc_addr_memap = 0x900;
 	} else {
-		lpc_addr_host_packet = 0x800;
-        lpc_addr_memap = 0x900;
+		lpc_addr_host_packet = 0x900;
+		lpc_addr_memap = 0x800;
 	}
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
