@@ -1,4 +1,4 @@
-#define  TOOLS_VER   "V1.4"
+#define  TOOLS_VER   "V1.5"
 
 /* Copyright (C)Copyright 2020 Bitland Telecom. All rights reserved.
 
@@ -258,8 +258,8 @@ void outb_dword(uint32_t out_data, uint16_t io_port)
 	SetPortVal(io_port, out_data, 4);
 }
 
-uint16_t lpc_addr_host_packet = 0x800;
-uint16_t lpc_addr_memap = 0x900;
+uint16_t lpc_addr_host_packet = 0x900;
+uint16_t lpc_addr_memap = 0x800;
 
 #define EC_COMMAND_PROTOCOL_3 0xda
 
@@ -550,8 +550,8 @@ int comm_init_lpc(void)
 		lpc_addr_host_packet = 0x800;
 		lpc_addr_memap = 0x900;
 	} else {
-		lpc_addr_host_packet = 0x800;
-		lpc_addr_memap = 0x900;
+		lpc_addr_host_packet = 0x900;
+		lpc_addr_memap = 0x800;
 	}
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
@@ -1051,7 +1051,7 @@ int main(int argc, char *argv[])
     /* Init lpc */
     comm_init_lpc();
 
-    if(!strcmp("help", argv[1]))
+    if(1 == argc || !strcmp("help", argv[1]))
     {
         printf("toolversion:        read hc32f460 tool version\n");
         printf("version:            read hc32f460 firmware version\n");
