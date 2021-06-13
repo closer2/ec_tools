@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V3.2"
+#define TOOLS_VER   "V3.4"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -99,6 +99,7 @@ void outb_dword(uint32_t out_data, uint16_t io_port)
 
 uint16_t lpc_addr_host_packet = 0x900;
 uint16_t lpc_addr_memap = 0x800;
+uint8_t temps_sensor_index = 0x01;
 
 //======================== PM-1 channel for ACPI================================
 WORD PM_STATUS_PORT66          =0x66;
@@ -438,12 +439,15 @@ int comm_init_lpc(void)
 	if(0x8086 == cpu_platform) {
 		lpc_addr_host_packet = 0x900;
 		lpc_addr_memap = 0x800;
+		temps_sensor_index = 0x01;
 	} else if (0x1022 == cpu_platform) {
 		lpc_addr_host_packet = 0x800;
 		lpc_addr_memap = 0x900;
+		temps_sensor_index = 0x00;
 	} else {
 		lpc_addr_host_packet = 0x900;
 		lpc_addr_memap = 0x800;
+		temps_sensor_index = 0x01;
 	}
 
 	ec_max_outsize = EC_LPC_HOST_PACKET_SIZE -
@@ -3694,7 +3698,7 @@ int read_mapped_temperature(int id)
 	int rv;
 	if (id < EC_TEMP_SENSOR_ENTRIES)
 	{
-		rv = read_mapped_mem8(EC_MEMMAP_TEMP_SENSOR + id);
+		rv = read_mapped_mem8(EC_MEMMAP_TEMP_SENSOR + id + temps_sensor_index);
 	}
 	else 
 	{
