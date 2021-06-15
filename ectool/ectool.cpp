@@ -1,4 +1,4 @@
-#define TOOLS_VER   "V3.4"
+#define TOOLS_VER   "V3.5"
 #define Vendor      "BITLAND"
 
 //******************************************************************************
@@ -4817,6 +4817,7 @@ int main(int argc, char *argv[])
     uint8_t  EC_Tool_Cmd=0;
     char **ToolArgv;
     char ToolArgc;
+    uint8_t ErrorCount=0;
 
     #if 0
     printf("cmd argc=%d\n", argc);
@@ -4858,16 +4859,22 @@ int main(int argc, char *argv[])
     }
 
     // Step-2 Init winio for IO access
-    IOInitOK = InitializeWinIo();
-    if(IOInitOK)
+    do
     {
-        //printf("WinIo OK.\n");
+        IOInitOK = InitializeWinIo();
+        if(ErrorCount > 5)
+        {
+            printf("Error during initialization of WinIo.\n");
+            goto IOError;
+        }
+        else if(ErrorCount > 0)
+        {
+            printf("Retry InitializeWinIo...\n");
+            _sleep(5000);
+        }
+        ErrorCount++;
     }
-    else
-    {
-        printf("Error during initialization of WinIo.\n");
-        goto IOError;
-    }
+    while (!IOInitOK);
 
     // Step-3 Init lpc
     if(0 != comm_init_lpc())
