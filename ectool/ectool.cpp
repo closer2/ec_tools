@@ -829,8 +829,6 @@ log_info_struct shutdown_case_list[]=
 	{0x36,	"DCJ too hot(Thermistor: DC Jack)"},
 	{0x37,	"Ambient too hot(Thermistor: Ambient)"},
 	{0x38,	"SSD too hot(Thermistor:SSD)"},
-	{0x39,	"39"},
-	{0x3A,	"3A"},
 
 	{0x40,	"Power button pressed"},
 	{0x41,	"Power button released"},
@@ -847,8 +845,6 @@ log_info_struct shutdown_case_list[]=
 	{0xD2,	"BIOS Memory_initila Fail"},
 	{0xD3,	"BIOS main block fail"},
 	{0xD4,	"BIOS Crisis Fail"},
-	{0xD5,	"D5"},
-	{0xD6,	"D6"},
 	{0xD7,	"Flash BIOS Start BIOS"},
 	{0xD8,	"Flash BIOS End BIOS"},
 	
@@ -4716,8 +4712,8 @@ const char help_str[] =
 	"      ecbackup backup.bin\n"
 	"  fanduty <percent>\n"
 	"      Forces the fan PWM to a constant duty cycle\n"
-	"  fingerprint <MCU | CPU>"
-	"      switch fingerprint usb connection to MCU or CPU"
+	"  fingerprint <MCU | CPU>\n"
+	"      switch fingerprint usb connection to MCU or CPU\n"
 	"  flashread <offset> <size> <outfile>\n"
 	"      Reads from EC flash to a file\n"
 	"  flashinfo\n"

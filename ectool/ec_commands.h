@@ -126,7 +126,8 @@ extern "C" {
 #define EC_MEMMAP_Day                       0x06 /* EC_Day */
 /* Unused 0x07 - 0x0B */
 #define EC_MEMMAP_GPIO_BOARD_ID             0x0C /* BOARD_ID */
-#define EC_MEMMAP_GPIO_PROJECT_ID           0x0D /* PROJECT_ID */ 
+#define EC_MEMMAP_GPIO_PROJECT_ID           0x0D /* PROJECT_ID */
+#define EC_MEMMAP_CPU_MODEL                 0x0E /* CPU MODEL: 0x01:i3, 0x02:i5, 0x03:i7 */
 /* Unused 0x0E - 0x0F */
 #define EC_MEMMAP_DEVICE_CONTROL_REG        0x10 /* Device Control register */ 
 #define EC_MEMMAP_LID_STATUS        BIT(0) /* 1:LID closed;0:LID open */
@@ -151,13 +152,22 @@ extern "C" {
 #define EC_MEMMAP_MFG_MODE                  0x18 /* Get MFG_MODE Status(0xBE:NO MFG MODE; 0xFF:MFG MODE) */
 #define EC_MEMMAP_WDT_TIMEOUT_COUNT         0x19 /* wakeup wdt timeout count */
 
-#define EC_MEMMAP_SYS_MISC1                 0x1A /* SYS_MISC1 */ 
-#define EC_MEMMAP_NC0               BIT(0) /* NC0 */
-#define EC_MEMMAP_NC1               BIT(1) /* NC1 */
-#define EC_MEMMAP_NMI_TRIGGER       BIT(2) /* NMI_TRIGGER: 1 => Trigger NMI# */
+#define EC_MEMMAP_SYS_MISC1                 0x1A /* SYS_MISC1 */
+/* Set AC_Recovery_MODE:10=>插AC进S0，01=>插AC进S5 ,11=>插AC进S0保持原来状态*/
+#define EC_MEMMAP_AC_RECOVERY_MASK0 BIT(0)
+#define EC_MEMMAP_AC_RECOVERY_MASK1 BIT(1)
+#define EC_MEMMAP_SYSTEM_REBOOT     BIT(2) /* System starts reboot */
+#define EC_MEMMAP_SYSTEM_ENTER_S3   BIT(3) /* System enters S3 */
+#define EC_MEMMAP_SYSTEM_ENTER_S4   BIT(4) /* System enters S4 */
+#define EC_MEMMAP_SYSTEM_ENTER_S5   BIT(5) /* System enters S5 */
+#define EC_MEMMAP_ACPI_MODE         BIT(6) /* ACPI MODE */
+#define EC_MEMMAP_CHINA_REGION      BIT(7) /* 0:china region  1: overseas */
+
 
 #define EC_MEMMAP_SYS_MISC2                 0x1B /* SYS_MISC2 */
-#define EC_MEMMAP_AC_ADAPTER_FLAG   BIT(0) /* AC adapter Status (0:Off-line;1:On-line) */ 
+#define EC_MEMMAP_AC_ADAPTER_FLAG   BIT(0) /* AC adapter Status (0:Off-line;1:On-line) */
+#define EC_MEMMAP_POWER_LAN_WAKE    BIT(1) /* Power lan wake (0:Off-line;1:On-line) */
+#define EC_MEMMAP_POWER_WLAN_WAKE   BIT(2) /* Power wlan wake  (0:Off-line;1:On-line) */
 
 #define EC_MEMMAP_SYS_MISC3                 0x1C /* status/flag. */ 
 #define EC_MEMMAP_SHOP_MODE         BIT(1) /* Shop mode of thermal table */
@@ -179,24 +189,36 @@ extern "C" {
 /* Unused 0x1E -0x1F */
 
 /* Sensor temperature, offset 0x20--0x2F */
-#define EC_MEMMAP_TEMP_SENSOR_00            0x20 /* CPU DTS */
-#define EC_MEMMAP_TEMP_SENSOR_01            0x21 /* Ambience NTC */
-#define EC_MEMMAP_TEMP_SENSOR_02            0x22 /* SSD1 NTC */
-#define EC_MEMMAP_TEMP_SENSOR_03            0x23 /* PCIEX16 NTC */
-#define EC_MEMMAP_TEMP_SENSOR_04            0x24 /* CPU VRAM NTC */
-#define EC_MEMMAP_TEMP_SENSOR_05            0x25 /* Memory NTC */
-#define EC_MEMMAP_TEMP_SENSOR_06            0x26 /* Battery */
-#define EC_MEMMAP_TEMP_SENSOR_07            0x27 /* Charger */
-#define EC_MEMMAP_TEMP_SENSOR_08            0x28 /* Type-C port-0 */
-#define EC_MEMMAP_TEMP_SENSOR_09            0x29 /* Type-C port-1 */
-#define EC_MEMMAP_TEMP_SENSOR_0A            0x2A 
-#define EC_MEMMAP_TEMP_SENSOR_0B            0x2B
-#define EC_MEMMAP_TEMP_SENSOR_0C            0x2C
-#define EC_MEMMAP_TEMP_SENSOR_0D            0x2D
-#define EC_MEMMAP_TEMP_SENSOR_0E            0x2E
-#define EC_MEMMAP_TEMP_SENSOR_0F            0x2F
-#define EC_MEMMAP_TEMP_SENSOR               EC_MEMMAP_TEMP_SENSOR_00
-/* Unused 0x30 -0x52 */
+#define EC_MEMMAP_TEMP_SENSOR_00        0x20 /* CPU DTS */
+#define EC_MEMMAP_TEMP_SENSOR_01        0x21 /* Ambience NTC */
+#define EC_MEMMAP_TEMP_SENSOR_02        0x22 /* SSD1 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_03        0x23 /* PCIEX16 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_04        0x24 /* CPU VRAM NTC */
+#define EC_MEMMAP_TEMP_SENSOR_05        0x25 /* Memory NTC */
+#define EC_MEMMAP_TEMP_SENSOR_06        0x26 /* SSD2 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_07        0x27 /* Battery */
+#define EC_MEMMAP_TEMP_SENSOR_08        0x28 /* Charger */
+#define EC_MEMMAP_TEMP_SENSOR_09        0x29 /* Type-C port-0 */
+#define EC_MEMMAP_TEMP_SENSOR_0A        0x2A /* Type-C port-1 */
+#define EC_MEMMAP_TEMP_SENSOR_0B        0x2B
+#define EC_MEMMAP_TEMP_SENSOR_0C        0x2C
+#define EC_MEMMAP_TEMP_SENSOR           EC_MEMMAP_TEMP_SENSOR_00
+#define EC_MEMMAP_TEMP_SENSOR_00_AVG    0x2D /* average: CPU DTS */
+#define EC_MEMMAP_TEMP_SENSOR_01_AVG    0x2E /* average: Ambience NTC */
+#define EC_MEMMAP_TEMP_SENSOR_02_AVG    0x2F /* average: SSD1 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_03_AVG    0x30 /* average: PCIEX16 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_04_AVG    0x31 /* average: Ambience NTC */
+#define EC_MEMMAP_TEMP_SENSOR_05_AVG    0x32 /* average: Memory NTC */
+#define EC_MEMMAP_TEMP_SENSOR_06_AVG    0x33 /* average: SSD2 NTC */
+#define EC_MEMMAP_TEMP_SENSOR_07_AVG    0x34 /* average: Battery */
+#define EC_MEMMAP_TEMP_SENSOR_08_AVG    0x35 /* average: Charger */
+#define EC_MEMMAP_TEMP_SENSOR_09_AVG    0x36 /* average: Type-C port-0 */
+#define EC_MEMMAP_TEMP_SENSOR_0A_AVG    0x37 /* average: Type-C port-1 */
+#define EC_MEMMAP_TEMP_SENSOR_0B_AVG    0x38
+#define EC_MEMMAP_TEMP_SENSOR_0C_AVG    0x39
+#define EC_MEMMAP_TEMP_SENSOR_AVG       EC_MEMMAP_TEMP_SENSOR_00_AVG
+
+/* Unused 0x3A -0x52 */
 #define EC_MEMMAP_CPU_FAN_STATUS            0x53 /* CPU fan_status */ 
 #define EC_MEMMAP_SYS_FAN_STATUS            0x54 /* SYS fan_status */ 
 /* Unused 0x55 */
@@ -241,12 +263,14 @@ extern "C" {
 #define EC_MEMMAP_EVENT_TYPEC         BIT(6) /* CPU event */
 #define EC_MEMMAP_EVENT_CHARGER       BIT(7) /* Charger event */
 #define EC_MEMMAP_WATCHDOG_TIMEOUT         0x70 /* EC watchdog timeout high byte(0x70), low byte(0x71) */ 
-#define EC_MEMMAP_SHUTDOWN_CAUSE           0x72 /* ShutDown Cause */ 
-#define EC_MEMMAP_WAKEUP_CAUSE             0x73 /* Wakeup Cause */ 
+
 #define EC_MEMMAP_S4S5_RESTORE             0x74 /* S4/S5 restore for EC 1 Byte */ 
 #define EC_MEMMAP_HOST_CMD_FLAGS           0x75 /* Host cmd interface flags (8 bits) */
 #define EC_MEMMAP_HOST_EVENTS              0x76 /* 64 bits */
 /* Unused 0x77 - 0xdf */
+
+#define EC_MEMMAP_SHUTDOWN_CAUSE            0xA0
+#define EC_MEMMAP_WAKEUP_CAUSE              0xC0
 
 /* E0--FF, write protect disable*/
 #define EC_MEMMAP_BIOS_CMD                  0xE0
@@ -407,6 +431,10 @@ extern "C" {
 #define EC_ACPI_MEM_KEYBOARD_BACKLIGHT 0x03
 /* DPTF Target Fan Duty (0-100, 0xff for auto/none) */
 #define EC_ACPI_MEM_FAN_DUTY           0x04
+
+/* check fan fault state,reboot s5->s0 */
+#define EC_ACPI_MEM_CPU_FAN_FAULT          0x53
+#define EC_ACPI_MEM_SYS_FAN_FAULT          0x54
 
 /*
  * DPTF temp thresholds. Any of the EC's temp sensors can have up to two
@@ -1989,6 +2017,10 @@ struct ec_response_sysinfo {
 /* Get fan target RPM */
 #define EC_CMD_PWM_GET_FAN_TARGET_RPM 0x0020
 
+struct ec_params_pwm_get_fan_rpm {
+	uint8_t fan_idx;
+} __ec_align4;
+
 struct ec_response_pwm_get_fan_rpm {
 	uint32_t rpm;
 } __ec_align4;
@@ -3570,9 +3602,12 @@ struct ec_response_flash_log {
 enum mfg_data_offset {
     MFG_MODE_OFFSET = 0x00,
     MFG_AC_RECOVERY_OFFSET = 0x01,
-    MFG_WDT_TIMEOUT_COUNT_OFFSET = 0x02,
+    MFG_ABNORMAL_POWER_DOWN_TIMES_OFFSET = 0x02,
     MFG_CHASSIS_INTRUSION_DATA_OFFSET = 0x03,
     MFG_CHASSIS_INTRUSION_MODE_OFFSET = 0x04,
+    MFG_POWER_LAST_STATE_OFFSET = 0x05,
+    MFG_POWER_LAN_WAKE_OFFSET = 0x06,
+    MFG_POWER_WLAN_WAKE_OFFSET = 0x07,
 
     MFG_OFFSET_COUNT
 };
@@ -3936,6 +3971,7 @@ struct ec_response_get_next_event_v1 {
 #define EC_MKBP_LID_OPEN	0
 #define EC_MKBP_TABLET_MODE	1
 #define EC_MKBP_BASE_ATTACHED	2
+#define EC_MKBP_FRONT_PROXIMITY	3
 
 /* Run keyboard factory test scanning */
 #define EC_CMD_KEYBOARD_FACTORY_TEST 0x0068
@@ -6300,20 +6336,21 @@ struct ec_params_button {
 } __ec_align1;
 
 enum keyboard_button_type {
-	KEYBOARD_BUTTON_POWER       = 0,
-	KEYBOARD_BUTTON_VOLUME_DOWN = 1,
-	KEYBOARD_BUTTON_VOLUME_UP   = 2,
-	KEYBOARD_BUTTON_RECOVERY    = 3,
-	KEYBOARD_BUTTON_CAPSENSE_1  = 4,
-	KEYBOARD_BUTTON_CAPSENSE_2  = 5,
-	KEYBOARD_BUTTON_CAPSENSE_3  = 6,
-	KEYBOARD_BUTTON_CAPSENSE_4  = 7,
-	KEYBOARD_BUTTON_CAPSENSE_5  = 8,
-	KEYBOARD_BUTTON_CAPSENSE_6  = 9,
-	KEYBOARD_BUTTON_CAPSENSE_7  = 10,
-	KEYBOARD_BUTTON_CAPSENSE_8  = 11,
+    KEYBOARD_BUTTON_POWER       = 0,
+    KEYBOARD_BUTTON_VOLUME_PLAY = 1,
+    KEYBOARD_BUTTON_VOLUME_DOWN = 2,
+    KEYBOARD_BUTTON_VOLUME_UP   = 3,
+    KEYBOARD_BUTTON_RECOVERY    = 4,
+    KEYBOARD_BUTTON_CAPSENSE_1  = 5,
+    KEYBOARD_BUTTON_CAPSENSE_2  = 6,
+    KEYBOARD_BUTTON_CAPSENSE_3  = 7,
+    KEYBOARD_BUTTON_CAPSENSE_4  = 8,
+    KEYBOARD_BUTTON_CAPSENSE_5  = 9,
+    KEYBOARD_BUTTON_CAPSENSE_6  = 10,
+    KEYBOARD_BUTTON_CAPSENSE_7  = 11,
+    KEYBOARD_BUTTON_CAPSENSE_8  = 12,
 
-	KEYBOARD_BUTTON_COUNT
+    KEYBOARD_BUTTON_COUNT
 };
 
 /*****************************************************************************/
